@@ -10,7 +10,7 @@ The plugin is in early development. Security fixes are applied to the latest rel
 
 Report vulnerabilities privately through GitHub's
 [private vulnerability reporting](https://github.com/Loubal70/billing-abby-for-woocommerce/security/advisories/new)
-(Security tab → "Report a vulnerability"), or by email to security@rankea.agency.
+(Security tab → "Report a vulnerability"), or by email to contact@rankea.agency.
 
 Please include:
 
