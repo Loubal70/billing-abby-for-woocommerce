@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Abby API documentation
+    url: https://docs.abby.fr
+    about: Questions about the Abby API itself (endpoints, fields, plans).
+  - name: Security report
+    url: https://github.com/Loubal70/billing-abby-for-woocommerce/security/advisories/new
+    about: Report a vulnerability privately — do not open a public issue.

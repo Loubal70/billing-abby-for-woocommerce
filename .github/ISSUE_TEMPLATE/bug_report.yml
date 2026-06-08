@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a problem with the plugin
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Create an order ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Plugin, WordPress, WooCommerce and PHP versions; HPOS enabled?
+      placeholder: |
+        - Plugin: 0.1.0
+        - WordPress: 6.x
+        - WooCommerce: x.x
+        - PHP: 8.2
+        - HPOS: yes/no
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste any error logs. Never include your Abby API key.
+      render: shell
