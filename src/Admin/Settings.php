@@ -123,11 +123,13 @@ final class Settings {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_settings' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'show_in_index'       => false,
 				),
 				array(
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'update_settings' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'show_in_index'       => false,
 					'args'                => array(
 						'api_key' => array(
 							'type'              => 'string',
