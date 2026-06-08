@@ -1,0 +1,22 @@
+{
+	"name": "billing-abby-for-woocommerce",
+	"version": "0.1.0",
+	"description": "Build tooling for the Billing Abby for WooCommerce admin app.",
+	"private": true,
+	"license": "GPL-2.0-or-later",
+	"scripts": {
+		"build": "wp-scripts build",
+		"start": "wp-scripts start",
+		"lint:js": "wp-scripts lint-js",
+		"format": "wp-scripts format assets/src"
+	},
+	"devDependencies": {
+		"@wordpress/api-fetch": "^7.48.0",
+		"@wordpress/components": "^35.0.0",
+		"@wordpress/dom-ready": "^4.48.0",
+		"@wordpress/element": "^8.0.0",
+		"@wordpress/i18n": "^6.21.0",
+		"@wordpress/icons": "^13.3.0",
+		"@wordpress/scripts": "^32.4.0"
+	}
+}

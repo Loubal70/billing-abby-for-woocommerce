@@ -14,29 +14,17 @@ use Automattic\WooCommerce\Utilities\FeaturesUtil;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Wires the plugin into WordPress and WooCommerce.
- *
- * Responsibilities are limited to start-up concerns: declaring HPOS
- * compatibility, making sure WooCommerce is available, then handing over to
- * Plugin. No business logic lives here.
+ * Start-up wiring: HPOS compatibility, the WooCommerce dependency check, then
+ * hand-off to Plugin. No business logic lives here.
  */
 final class Bootstrap {
 
 	/**
-	 * Absolute path to the main plugin file.
-	 *
-	 * @var string
-	 */
-	private string $plugin_file;
-
-	/**
-	 * Store the path WooCommerce needs to attribute compatibility flags.
+	 * Keep the plugin file path for compatibility flags and module wiring.
 	 *
 	 * @param string $plugin_file Absolute path to the main plugin file.
 	 */
-	public function __construct( string $plugin_file ) {
-		$this->plugin_file = $plugin_file;
-	}
+	public function __construct( private readonly string $plugin_file ) {}
 
 	/**
 	 * Register the hooks that start the plugin.
@@ -67,7 +55,7 @@ final class Bootstrap {
 			return;
 		}
 
-		Plugin::instance();
+		Plugin::instance( $this->plugin_file );
 	}
 
 	/**
