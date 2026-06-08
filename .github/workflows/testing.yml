@@ -121,3 +121,28 @@ jobs:
             --categories=plugin_repo,security \
             --exclude-directories=tests,bin,.github,.claude \
             --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md,README.md
+
+  assets:
+    name: JS assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint JavaScript
+        run: npm run lint:js
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Ensure committed build/ is up to date
+        run: git diff --exit-status -- build/
