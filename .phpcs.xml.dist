@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<ruleset name="Billing Abby for WooCommerce">
+	<description>Coding standards for the Billing Abby for WooCommerce plugin.</description>
+
+	<!-- What to scan -->
+	<file>.</file>
+	<exclude-pattern>/vendor/</exclude-pattern>
+	<exclude-pattern>/node_modules/</exclude-pattern>
+	<exclude-pattern>/tests/</exclude-pattern>
+
+	<!-- How to scan -->
+	<arg value="sp"/><!-- Show sniff codes and progress -->
+	<arg name="basepath" value="./"/>
+	<arg name="colors"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+
+	<!-- Check PHP cross-version compatibility from 8.2 upwards. -->
+	<config name="testVersion" value="8.2-"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- WordPress Coding Standards -->
+	<config name="minimum_supported_wp_version" value="6.4"/>
+	<rule ref="WordPress"/>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="bafw"/>
+				<element value="Rankea\BillingAbby"/>
+				<element value="BAFW_"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="billing-abby-for-woocommerce"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.WhiteSpace.ControlStructureSpacing">
+		<properties>
+			<property name="blank_line_check" value="true"/>
+		</properties>
+	</rule>
+
+	<!-- PSR-4 autoloaded classes use class-name files, not WordPress hyphenated names. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>/src/</exclude-pattern>
+	</rule>
+</ruleset>

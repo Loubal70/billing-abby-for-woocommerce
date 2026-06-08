@@ -1,0 +1,40 @@
+{
+  "name": "rankea/billing-abby-for-woocommerce",
+  "description": "Connector that syncs WooCommerce orders to Abby invoicing.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://rankea.agency/tools/billing-abby-for-woocommerce",
+  "authors": [
+    {
+      "name": "Rankea",
+      "homepage": "https://rankea.agency"
+    }
+  ],
+  "require": {
+    "php": ">=8.2"
+  },
+  "require-dev": {
+    "wp-coding-standards/wpcs": "^3.1",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpunit/phpunit": "^9.6",
+    "yoast/phpunit-polyfills": "^1.1",
+    "wp-cli/i18n-command": "^2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Rankea\\BillingAbby\\": "src/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "scripts": {
+    "phpcs": "phpcs",
+    "phpcbf": "phpcbf",
+    "test": "phpunit",
+    "makepot": "wp i18n make-pot . languages/billing-abby-for-woocommerce.pot --domain=billing-abby-for-woocommerce"
+  }
+}
