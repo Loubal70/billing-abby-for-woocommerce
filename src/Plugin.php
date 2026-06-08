@@ -19,6 +19,13 @@ defined( 'ABSPATH' ) || exit;
 final class Plugin {
 
 	/**
+	 * Plugin version, kept in sync with the main file header and readme.txt.
+	 *
+	 * @var string
+	 */
+	public const VERSION = '0.1.0';
+
+	/**
 	 * Single shared instance.
 	 *
 	 * @var Plugin|null

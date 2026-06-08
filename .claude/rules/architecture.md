@@ -4,11 +4,13 @@
 
 ```
 billing-abby-for-woocommerce/
-├── billing-abby-for-woocommerce.php    # bootstrap : header, garde ABSPATH, check WC, init
+├── billing-abby-for-woocommerce.php    # entrée : header, garde ABSPATH, autoloader, register()
 ├── uninstall.php                       # nettoyage options/scheduled actions
-├── composer.json                       # autoload PSR-4 Rankea\BillingAbby\
+├── composer.json                       # PSR-4 + outillage dev (WPCS, PHPUnit) — pas de dépendance runtime
 ├── readme.txt                          # format WP.org (≠ README.md)
 ├── src/
+│   ├── Autoloader.php                  # autoloader PSR-4 maison (Rankea\BillingAbby\ → src/)
+│   ├── Bootstrap.php                   # final class : HPOS, garde WC, démarrage
 │   ├── Plugin.php                      # singleton, enregistre les hooks
 │   ├── Admin/Settings.php              # onglet réglages WooCommerce + clé API
 │   ├── Abby/Client.php                 # client HTTP (wp_remote_*), auth, erreurs
@@ -23,8 +25,18 @@ billing-abby-for-woocommerce/
 
 - `defined('ABSPATH') || exit;` en tête.
 - En-tête complet (voir CLAUDE.md), dont `Requires Plugins: woocommerce`, `Text Domain: billing-abby-for-woocommerce`.
-- Vérifier WooCommerce avant init ; sinon admin notice + arrêt propre.
-- Charger l'autoload Composer puis `Plugin::instance()`.
+- Le fichier d'entrée reste minimal : charger l'autoloader (`require src/Autoloader.php` +
+  `Autoloader::register()`) puis déléguer à `Bootstrap`. Aucun symbole global.
+- Vérifier WooCommerce avant init ; sinon admin notice + arrêt propre (dans `Bootstrap`).
+
+### Autoload — convention WP.org
+
+- **Composer en dev** (PSR-4, WPCS, PHPUnit) ; à l'exécution, **autoloader maison** (`src/Autoloader.php`).
+- Tant qu'il n'y a **aucune dépendance runtime**, ne pas livrer `vendor/` dans le build SVN
+  (`.distignore` l'exclut) : embarquer l'autoloader Composer pour ne charger que nos classes est
+  du bundling inutile que Plugin Check/les relecteurs pointent.
+- Le jour où une vraie lib runtime est ajoutée : basculer sur `composer install --no-dev
+  --optimize-autoloader` et inclure `vendor/` dans le build.
 
 ## Compatibilité HPOS (obligatoire)
 
