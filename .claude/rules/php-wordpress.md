@@ -45,5 +45,12 @@
 ```bash
 ./vendor/bin/phpcs
 ./vendor/bin/phpunit
-wp plugin check billing-abby-for-woocommerce   # vert sur Plugin Repo + Security
+# Plugin Check on what actually ships (mirrors .distignore) -> green on Plugin Repo + Security
+wp plugin check billing-abby-for-woocommerce --categories=plugin_repo,security \
+  --exclude-directories=tests,bin,.github,.claude \
+  --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md
 ```
+
+> Sans ces exclusions, Plugin Check signale les fichiers de **dev** (configs cachées, `tests/`,
+> `bin/`, `.github/`, `.claude/`, `CLAUDE.md`, `ROADMAP.md`) qui ne sont **pas** dans le zip livré.
+> Le build réellement distribué est vert (vérifiable via une copie élaguée + `--slug=...`).
