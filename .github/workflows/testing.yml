@@ -145,4 +145,9 @@ jobs:
         run: npm run build
 
       - name: Ensure committed build/ is up to date
-        run: git diff --exit-status -- build/
+        run: |
+          if [ -n "$(git status --porcelain build/)" ]; then
+            echo "::error::build/ is out of date — run 'npm run build' and commit the result."
+            git status --porcelain build/
+            exit 1
+          fi
