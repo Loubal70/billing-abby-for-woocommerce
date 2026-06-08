@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -26,7 +26,7 @@ jobs:
           tools: composer
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Run PHP_CodeSniffer
         run: composer phpcs
@@ -53,7 +53,7 @@ jobs:
           --health-retries=5
     steps:
       - name: Check out source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -63,7 +63,7 @@ jobs:
           tools: composer
 
       - name: Install Composer dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@v4
 
       - name: Install Subversion
         run: sudo apt-get update -qq && sudo apt-get install -y -qq subversion
@@ -77,31 +77,47 @@ jobs:
   plugin-check:
     name: Plugin Check
     runs-on: ubuntu-latest
+    services:
+      database:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Check out source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          path: billing-abby-for-woocommerce
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           coverage: none
+          tools: wp-cli
+
+      # The wp-env based plugin-check-action proved unreliable on the runners
+      # (Docker "Environment not initialized"), so Plugin Check runs directly
+      # through wp-cli here, mirroring the local `composer plugin-check`.
+      - name: Set up WordPress
+        run: |
+          wp core download --path=wp
+          wp config create --path=wp --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1
+          wp core install --path=wp --url=http://localhost --title="Test" \
+            --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
+          wp plugin install plugin-check --activate --path=wp
+          cp -r billing-abby-for-woocommerce wp/wp-content/plugins/billing-abby-for-woocommerce
 
       - name: Run Plugin Check
-        uses: wordpress/plugin-check-action@v1
-        with:
-          categories: plugin_repo,security
-          exclude-directories: |
-            tests
-            bin
-            .github
-            .claude
-          exclude-files: |
-            .phpcs.xml.dist
-            .editorconfig
-            .gitignore
-            .distignore
-            phpunit.xml.dist
-            CLAUDE.md
-            ROADMAP.md
-            README.md
+        run: |
+          wp plugin check billing-abby-for-woocommerce --path=wp \
+            --categories=plugin_repo,security \
+            --exclude-directories=tests,bin,.github,.claude \
+            --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md,README.md
