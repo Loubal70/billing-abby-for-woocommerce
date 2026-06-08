@@ -179,39 +179,45 @@ function SettingsApp() {
 					__nextHasNoMarginBottom
 				/>
 
-				<p className="bafw-settings__help">
-					{ __( 'No API key yet?', 'billing-abby-for-woocommerce' ) }{ ' ' }
-					<ExternalLink href={ DOCS_URL }>
-						{ __(
-							'How to create an Abby API key',
-							'billing-abby-for-woocommerce'
-						) }
-					</ExternalLink>
-				</p>
-
 				<Flex
 					className="bafw-settings__actions"
-					justify="flex-start"
-					gap={ 3 }
+					justify="space-between"
+					align="center"
+					gap={ 4 }
 				>
-					<Button
-						variant="primary"
-						onClick={ () => setConfirmOpen( true ) }
-						disabled={ saving || ! hasInput }
-						isBusy={ saving }
-					>
-						{ __( 'Save', 'billing-abby-for-woocommerce' ) }
-					</Button>
-					<Button
-						variant="secondary"
-						onClick={ testConnection }
-						disabled={ ! keyIsSet }
-					>
+					<Flex justify="flex-start" gap={ 3 } expanded={ false }>
+						<Button
+							variant="primary"
+							onClick={ () => setConfirmOpen( true ) }
+							disabled={ saving || ! hasInput }
+							isBusy={ saving }
+						>
+							{ __( 'Save', 'billing-abby-for-woocommerce' ) }
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={ testConnection }
+							disabled={ ! keyIsSet }
+						>
+							{ __(
+								'Test connection',
+								'billing-abby-for-woocommerce'
+							) }
+						</Button>
+					</Flex>
+
+					<span>
 						{ __(
-							'Test connection',
+							'No API key yet?',
 							'billing-abby-for-woocommerce'
-						) }
-					</Button>
+						) }{ ' ' }
+						<ExternalLink href={ DOCS_URL }>
+							{ __(
+								'How to create an Abby API key',
+								'billing-abby-for-woocommerce'
+							) }
+						</ExternalLink>
+					</span>
 				</Flex>
 
 				{ confirmOpen && (
