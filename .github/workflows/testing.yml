@@ -65,6 +65,9 @@ jobs:
       - name: Install Composer dependencies
         uses: ramsey/composer-install@v3
 
+      - name: Install Subversion
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq subversion
+
       - name: Set up the WordPress test suite
         run: bash bin/install-wp-tests.sh wordpress_tests root root 127.0.0.1 latest true
 
@@ -86,3 +89,19 @@ jobs:
 
       - name: Run Plugin Check
         uses: wordpress/plugin-check-action@v1
+        with:
+          categories: plugin_repo,security
+          exclude-directories: |
+            tests
+            bin
+            .github
+            .claude
+          exclude-files: |
+            .phpcs.xml.dist
+            .editorconfig
+            .gitignore
+            .distignore
+            phpunit.xml.dist
+            CLAUDE.md
+            ROADMAP.md
+            README.md
