@@ -1,0 +1,22 @@
+.bafw-settings {
+	&__card {
+		margin-top: 20px;
+	}
+
+	&__notice {
+		margin-bottom: 16px;
+	}
+
+	&__status {
+		margin-bottom: 16px;
+	}
+
+	&__status-icon {
+		display: inline-flex;
+		color: #1a7f37;
+	}
+
+	&__actions {
+		margin-top: 16px;
+	}
+}
