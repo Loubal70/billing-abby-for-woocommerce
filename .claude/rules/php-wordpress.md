@@ -48,7 +48,7 @@
 # Plugin Check on what actually ships (mirrors .distignore) -> green on Plugin Repo + Security
 wp plugin check billing-abby-for-woocommerce --categories=plugin_repo,security \
   --exclude-directories=tests,bin,.github,.claude \
-  --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md
+  --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md,README.md
 ```
 
 > Sans ces exclusions, Plugin Check signale les fichiers de **dev** (configs cachées, `tests/`,

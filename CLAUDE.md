@@ -49,7 +49,7 @@ composer install
 # Plugin Check: target what actually ships (mirrors .distignore); must be green before each PR
 wp plugin check billing-abby-for-woocommerce --categories=plugin_repo,security \
   --exclude-directories=tests,bin,.github,.claude \
-  --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md
+  --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md,README.md
 ```
 
 ## Workflow attendu de l'agent
