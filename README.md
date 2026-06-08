@@ -1,7 +1,6 @@
 # Billing Abby for WooCommerce
 
-<!-- Replace OWNER with your GitHub username/org once pushed. -->
-[![Testing](https://github.com/OWNER/billing-abby-for-woocommerce/actions/workflows/testing.yml/badge.svg)](https://github.com/OWNER/billing-abby-for-woocommerce/actions/workflows/testing.yml)
+[![Testing](https://github.com/Loubal70/billing-abby-for-woocommerce/actions/workflows/testing.yml/badge.svg)](https://github.com/Loubal70/billing-abby-for-woocommerce/actions/workflows/testing.yml)
 
 A native WordPress connector that syncs **WooCommerce** orders to **Abby** invoicing
 ([abby.fr](https://abby.fr)) through the Abby API — directly from your own server, with
