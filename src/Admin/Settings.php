@@ -18,8 +18,7 @@ use WP_REST_Server;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registers the WooCommerce sub-page, mounts the React panel, and exposes a REST
- * endpoint to read/write the Abby API key (capability + nonce protected).
+ * WooCommerce sub-page + REST endpoint for the Abby API key (capability + nonce protected).
  */
 final class Settings {
 
@@ -29,32 +28,16 @@ final class Settings {
 	private const REST_NAMESPACE = 'bafw/v1';
 	private const SCRIPT_HANDLE  = 'bafw-settings';
 
-	/**
-	 * Hook suffix returned by add_submenu_page().
-	 *
-	 * @var string
-	 */
 	private string $hook_suffix = '';
 
-	/**
-	 * Keep the plugin instance for asset path/URL resolution.
-	 *
-	 * @param Plugin $plugin Main plugin instance.
-	 */
 	public function __construct( private readonly Plugin $plugin ) {}
 
-	/**
-	 * Hook the settings screen into WordPress.
-	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
 
-	/**
-	 * Add the settings sub-page under the WooCommerce menu.
-	 */
 	public function add_menu_page(): void {
 		$this->hook_suffix = (string) add_submenu_page(
 			'woocommerce',
@@ -66,9 +49,6 @@ final class Settings {
 		);
 	}
 
-	/**
-	 * Render the page container the React app mounts into.
-	 */
 	public function render_page(): void {
 		printf(
 			'<div class="wrap"><h1>%s</h1><div id="bafw-settings-root"></div></div>',
@@ -76,11 +56,6 @@ final class Settings {
 		);
 	}
 
-	/**
-	 * Enqueue the built React bundle on the settings page only.
-	 *
-	 * @param string $hook_suffix Current admin page hook suffix.
-	 */
 	public function enqueue_assets( string $hook_suffix ): void {
 		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
 			return;
@@ -111,9 +86,6 @@ final class Settings {
 		wp_style_add_data( self::SCRIPT_HANDLE, 'rtl', 'replace' );
 	}
 
-	/**
-	 * Register the settings REST routes.
-	 */
 	public function register_routes(): void {
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -142,25 +114,14 @@ final class Settings {
 		);
 	}
 
-	/**
-	 * Whether the current user may manage these settings.
-	 */
 	public function check_permission(): bool {
 		return current_user_can( self::CAPABILITY );
 	}
 
-	/**
-	 * Return the current (masked) settings state.
-	 */
 	public function get_settings(): WP_REST_Response {
 		return rest_ensure_response( $this->current_state() );
 	}
 
-	/**
-	 * Store the submitted API key (encrypted) and return the masked state.
-	 *
-	 * @param WP_REST_Request $request Incoming REST request.
-	 */
 	public function update_settings( WP_REST_Request $request ): WP_REST_Response {
 		$api_key = trim( (string) $request->get_param( 'api_key' ) );
 
@@ -169,11 +130,6 @@ final class Settings {
 		return rest_ensure_response( $this->current_state() );
 	}
 
-	/**
-	 * Build the masked state exposed to the client (never the raw key).
-	 *
-	 * @return array{api_key_set: bool, api_key_masked: string}
-	 */
 	private function current_state(): array {
 		$api_key = Secret::decrypt( (string) get_option( self::OPTION, '' ) );
 
@@ -183,13 +139,6 @@ final class Settings {
 		);
 	}
 
-	/**
-	 * Mask a key with a fixed-length placeholder, revealing only the last four
-	 * characters. The placeholder length is constant so the real key length is
-	 * never disclosed.
-	 *
-	 * @param string $api_key Plaintext key.
-	 */
 	private function mask( string $api_key ): string {
 		$length = strlen( $api_key );
 
@@ -201,6 +150,7 @@ final class Settings {
 			return str_repeat( '*', $length );
 		}
 
+		// Fixed-length placeholder so the real key length is never disclosed.
 		return '****' . substr( $api_key, -4 );
 	}
 }

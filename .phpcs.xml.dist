@@ -22,7 +22,11 @@
 
 	<!-- WordPress Coding Standards -->
 	<config name="minimum_supported_wp_version" value="6.4"/>
-	<rule ref="WordPress"/>
+	<rule ref="WordPress">
+		<!-- File headers kept (WP standard); method/property docblocks optional with strict typing. -->
+		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+		<exclude name="Squiz.Commenting.VariableComment.Missing"/>
+	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
