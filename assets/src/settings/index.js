@@ -22,7 +22,45 @@ import { Icon, check } from '@wordpress/icons';
 import './style.scss';
 
 const SETTINGS_ROUTE = '/bafw/v1/settings';
+const TEST_ROUTE = '/bafw/v1/test-connection';
 const DOCS_URL = 'https://docs.abby.fr/api/authentification';
+
+function connectionNotice( status ) {
+	switch ( status ) {
+		case 'valid':
+			return {
+				status: 'success',
+				message: __(
+					'Connection successful.',
+					'billing-abby-for-woocommerce'
+				),
+			};
+		case 'invalid':
+			return {
+				status: 'error',
+				message: __(
+					'Invalid API key.',
+					'billing-abby-for-woocommerce'
+				),
+			};
+		case 'forbidden':
+			return {
+				status: 'error',
+				message: __(
+					'Your Abby plan does not allow API access (Pro or higher required).',
+					'billing-abby-for-woocommerce'
+				),
+			};
+		default:
+			return {
+				status: 'error',
+				message: __(
+					'Could not reach Abby. Please try again.',
+					'billing-abby-for-woocommerce'
+				),
+			};
+	}
+}
 
 function SettingsApp() {
 	const [ apiKey, setApiKey ] = useState( '' );
@@ -31,6 +69,7 @@ function SettingsApp() {
 	const [ loading, setLoading ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ confirmOpen, setConfirmOpen ] = useState( false );
+	const [ testing, setTesting ] = useState( false );
 	const [ notice, setNotice ] = useState( null );
 
 	useEffect( () => {
@@ -103,15 +142,14 @@ function SettingsApp() {
 			.finally( () => setSaving( false ) );
 	};
 
-	// TODO: confirm the Abby key-validation endpoint on docs.abby.fr before wiring this up.
 	const testConnection = () => {
-		setNotice( {
-			status: 'warning',
-			message: __(
-				'Connection testing is not available yet.',
-				'billing-abby-for-woocommerce'
-			),
-		} );
+		setTesting( true );
+		setNotice( null );
+
+		apiFetch( { path: TEST_ROUTE, method: 'POST' } )
+			.then( ( data ) => setNotice( connectionNotice( data.status ) ) )
+			.catch( () => setNotice( connectionNotice( 'error' ) ) )
+			.finally( () => setTesting( false ) );
 	};
 
 	if ( loading ) {
@@ -197,7 +235,8 @@ function SettingsApp() {
 						<Button
 							variant="secondary"
 							onClick={ testConnection }
-							disabled={ ! keyIsSet }
+							isBusy={ testing }
+							disabled={ ! keyIsSet || testing }
 						>
 							{ __(
 								'Test connection',

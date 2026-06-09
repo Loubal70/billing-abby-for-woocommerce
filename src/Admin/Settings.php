@@ -9,8 +9,9 @@ declare(strict_types=1);
 
 namespace Rankea\BillingAbby\Admin;
 
+use Rankea\BillingAbby\Abby\Client;
 use Rankea\BillingAbby\Plugin;
-use Rankea\BillingAbby\Support\Secret;
+use Rankea\BillingAbby\Support\ApiKey;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -22,7 +23,6 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Settings {
 
-	private const OPTION         = 'bafw_abby_api_key';
 	private const CAPABILITY     = 'manage_woocommerce';
 	private const PAGE_SLUG      = 'bafw-settings';
 	private const REST_NAMESPACE = 'bafw/v1';
@@ -112,6 +112,17 @@ final class Settings {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/test-connection',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'test_connection' ),
+				'permission_callback' => array( $this, 'check_permission' ),
+				'show_in_index'       => false,
+			)
+		);
 	}
 
 	public function check_permission(): bool {
@@ -125,13 +136,19 @@ final class Settings {
 	public function update_settings( WP_REST_Request $request ): WP_REST_Response {
 		$api_key = trim( (string) $request->get_param( 'api_key' ) );
 
-		update_option( self::OPTION, Secret::encrypt( $api_key ), false );
+		ApiKey::save( $api_key );
 
 		return rest_ensure_response( $this->current_state() );
 	}
 
+	public function test_connection(): WP_REST_Response {
+		$status = ( new Client( ApiKey::get() ) )->validate_key();
+
+		return rest_ensure_response( array( 'status' => $status ) );
+	}
+
 	private function current_state(): array {
-		$api_key = Secret::decrypt( (string) get_option( self::OPTION, '' ) );
+		$api_key = ApiKey::get();
 
 		return array(
 			'api_key_set'    => '' !== $api_key,
