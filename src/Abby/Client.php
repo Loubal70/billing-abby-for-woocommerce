@@ -31,16 +31,7 @@ final class Client {
 	 * @return string One of: valid, invalid, forbidden, error.
 	 */
 	public function validate_key(): string {
-		$response = $this->request(
-			'GET',
-			'/contacts',
-			array(
-				'query' => array(
-					'page'  => 1,
-					'limit' => 1,
-				),
-			)
-		);
+		$response = $this->get_contacts();
 
 		if ( is_wp_error( $response ) ) {
 			return 'error';
@@ -61,6 +52,44 @@ final class Client {
 		}
 
 		return 'error';
+	}
+
+	public function find_contact_id( string $email ): ?string {
+		$data = $this->decode( $this->get_contacts( $email ) );
+		$id   = $data['docs'][0]['id'] ?? null;
+
+		return is_string( $id ) ? $id : null;
+	}
+
+	public function create_contact( array $payload ): ?string {
+		return $this->create_abby_resource( '/contact', $payload );
+	}
+
+	public function create_invoice( string $customer_id ): ?string {
+		return $this->create_abby_resource( '/v2/billing/invoice/' . rawurlencode( $customer_id ) );
+	}
+
+	public function update_invoice_lines( string $invoice_id, array $lines ): bool {
+		$response = $this->request(
+			'PATCH',
+			'/v2/billing/' . rawurlencode( $invoice_id ) . '/lines',
+			array( 'body' => array( 'lines' => $lines ) )
+		);
+
+		return null !== $this->decode( $response );
+	}
+
+	private function get_contacts( ?string $search = null ): array|WP_Error {
+		$query = array(
+			'page'  => 1,
+			'limit' => 1,
+		);
+
+		if ( null !== $search ) {
+			$query['search'] = $search;
+		}
+
+		return $this->request( 'GET', '/contacts', array( 'query' => $query ) );
 	}
 
 	private function request( string $method, string $path, array $options = array() ): array|WP_Error {
@@ -90,5 +119,36 @@ final class Client {
 		}
 
 		return wp_remote_request( $url, $args );
+	}
+
+	private function decode( array|WP_Error $response ): ?array {
+		if ( is_wp_error( $response ) ) {
+			return null;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+
+		if ( $code < 200 || $code >= 300 ) {
+			return null;
+		}
+
+		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		return is_array( $data ) ? $data : null;
+	}
+
+	/**
+	 * Create a resource on Abby via POST and return its id.
+	 *
+	 * @param string                    $path Abby endpoint path.
+	 * @param array<string, mixed>|null $body Optional JSON request body.
+	 * @return string|null The created resource id, or null on failure.
+	 */
+	private function create_abby_resource( string $path, ?array $body = null ): ?string {
+		$options = null !== $body ? array( 'body' => $body ) : array();
+		$data    = $this->decode( $this->request( 'POST', $path, $options ) );
+		$id      = $data['id'] ?? null;
+
+		return is_string( $id ) ? $id : null;
 	}
 }
