@@ -61,6 +61,8 @@ final class InvoiceSync {
 		$order->update_meta_data( self::INVOICE_ID_META, $invoice_id );
 		$order->save();
 
+		$order->add_order_note( __( 'Abby: draft invoice created.', 'billing-abby-for-woocommerce' ) );
+
 		return $invoice_id;
 	}
 
@@ -81,6 +83,8 @@ final class InvoiceSync {
 
 		$order->update_meta_data( self::LINES_SYNCED_META, 'yes' );
 		$order->save();
+
+		$order->add_order_note( __( 'Abby: invoice lines synced.', 'billing-abby-for-woocommerce' ) );
 	}
 
 	private function resolve_contact( Client $client, InvoiceMapper $mapper, WC_Order $order ): ?string {

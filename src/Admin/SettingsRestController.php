@@ -12,6 +12,7 @@ namespace Rankea\BillingAbby\Admin;
 use Rankea\BillingAbby\Abby\Client;
 use Rankea\BillingAbby\Abby\ProductType;
 use Rankea\BillingAbby\Support\ApiKey;
+use Rankea\BillingAbby\Support\SyncLog;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -73,6 +74,29 @@ final class SettingsRestController {
 				'show_in_index'       => false,
 			)
 		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/logs',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_logs' ),
+				'permission_callback' => array( $this, 'check_permission' ),
+				'show_in_index'       => false,
+				'args'                => array(
+					'page'     => array(
+						'type'              => 'integer',
+						'default'           => 1,
+						'sanitize_callback' => 'absint',
+					),
+					'per_page' => array(
+						'type'              => 'integer',
+						'default'           => 20,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
 	}
 
 	public function check_permission(): bool {
@@ -103,6 +127,13 @@ final class SettingsRestController {
 		$status = ( new Client( ApiKey::get() ) )->validate_key();
 
 		return rest_ensure_response( array( 'status' => $status->value ) );
+	}
+
+	public function get_logs( WP_REST_Request $request ): WP_REST_Response {
+		$page     = max( 1, (int) $request->get_param( 'page' ) );
+		$per_page = (int) $request->get_param( 'per_page' );
+
+		return rest_ensure_response( SyncLog::get( $page, $per_page ) );
 	}
 
 	private function current_state(): array {

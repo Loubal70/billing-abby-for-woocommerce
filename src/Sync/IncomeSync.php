@@ -45,6 +45,20 @@ final class IncomeSync {
 
 		$order->update_meta_data( self::PAID_SYNCED_META, 'yes' );
 		$order->save();
+
+		$count = count( $entries );
+		$order->add_order_note(
+			sprintf(
+				/* translators: %d: number of income-book entries. */
+				_n(
+					'Abby: income recorded (%d entry).',
+					'Abby: income recorded (%d entries).',
+					$count,
+					'billing-abby-for-woocommerce'
+				),
+				$count
+			)
+		);
 	}
 
 	/**

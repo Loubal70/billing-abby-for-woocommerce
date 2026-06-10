@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Rankea\BillingAbby;
 
 use Automattic\WooCommerce\Utilities\FeaturesUtil;
+use Rankea\BillingAbby\Support\SyncLog;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,6 +22,8 @@ final class Bootstrap {
 	public function __construct( private readonly string $plugin_file ) {}
 
 	public function register(): void {
+		register_activation_hook( $this->plugin_file, array( SyncLog::class, 'install' ) );
+
 		add_action( 'before_woocommerce_init', array( $this, 'declare_hpos_compatibility' ) );
 		add_action( 'plugins_loaded', array( $this, 'boot' ) );
 	}

@@ -7,6 +7,7 @@ import { Notice, Spinner } from '@wordpress/components';
 import { getSettings } from './api';
 import ConnectionCard from './components/ConnectionCard';
 import IncomeCard from './components/IncomeCard';
+import ActivityLog from './components/ActivityLog';
 import './style.scss';
 
 export default function SettingsApp() {
@@ -79,8 +80,13 @@ export default function SettingsApp() {
 				onKeyIsSet={ setKeyIsSet }
 				onNotice={ setNotice }
 			/>
-			{ keyIsSet && (
-				<IncomeCard settings={ settings } onNotice={ setNotice } />
+			{ keyIsSet ? (
+				<div className="bafw-grid">
+					<IncomeCard settings={ settings } onNotice={ setNotice } />
+					<ActivityLog />
+				</div>
+			) : (
+				<ActivityLog />
 			) }
 		</Fragment>
 	);

@@ -12,6 +12,7 @@ namespace Rankea\BillingAbby;
 use Rankea\BillingAbby\Admin\ProductFields;
 use Rankea\BillingAbby\Admin\SettingsPage;
 use Rankea\BillingAbby\Admin\SettingsRestController;
+use Rankea\BillingAbby\Support\SyncLog;
 use Rankea\BillingAbby\Sync\OrderSync;
 
 defined( 'ABSPATH' ) || exit;
@@ -50,6 +51,8 @@ final class Plugin {
 	}
 
 	private function init(): void {
+		SyncLog::register();
+
 		( new SettingsPage( $this ) )->register();
 		( new SettingsRestController() )->register();
 		( new ProductFields() )->register();
