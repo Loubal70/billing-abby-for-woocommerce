@@ -1,6 +1,6 @@
 <?php
 /**
- * Order synchronization.
+ * Order synchronization coordinator.
  *
  * @package Rankea\BillingAbby
  */
@@ -9,26 +9,28 @@ declare(strict_types=1);
 
 namespace Rankea\BillingAbby\Sync;
 
-use Rankea\BillingAbby\Abby\Client;
-use Rankea\BillingAbby\Abby\InvoiceMapper;
-use Rankea\BillingAbby\Support\ApiKey;
 use WC_Order;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Syncs each WooCommerce order to an Abby invoice (create draft, then mark paid)
- * asynchronously via Action Scheduler.
+ * Wires WooCommerce order hooks to the Abby sync flows, enqueuing the work asynchronously
+ * via Action Scheduler (never calling Abby during checkout or a page load).
  */
 final class OrderSync {
 
-	private const CREATE_HOOK       = 'bafw_create_invoice';
-	private const PAID_HOOK         = 'bafw_mark_paid';
-	private const ACTION_GROUP      = 'billing-abby';
-	private const INVOICE_ID_META   = '_bafw_abby_invoice_id';
-	private const LINES_SYNCED_META = '_bafw_abby_lines_synced';
-	private const PAID_SYNCED_META  = '_bafw_abby_paid_synced';
-	private const DRAFT_STATUSES    = array( 'auto-draft', 'checkout-draft', 'trash' );
+	private const CREATE_HOOK    = 'bafw_create_invoice';
+	private const PAID_HOOK      = 'bafw_mark_paid';
+	private const ACTION_GROUP   = 'billing-abby';
+	private const DRAFT_STATUSES = array( 'auto-draft', 'checkout-draft', 'trash' );
+
+	private readonly InvoiceSync $invoices;
+	private readonly IncomeSync $income;
+
+	public function __construct() {
+		$this->invoices = new InvoiceSync();
+		$this->income   = new IncomeSync();
+	}
 
 	public function register(): void {
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'on_order_placed' ) );
@@ -48,11 +50,7 @@ final class OrderSync {
 			return;
 		}
 
-		if ( $this->is_draft_order( $order ) ) {
-			return;
-		}
-
-		if ( $this->already_created( $order ) ) {
+		if ( $this->is_draft_order( $order ) || $this->invoices->is_created( $order ) ) {
 			return;
 		}
 
@@ -66,7 +64,7 @@ final class OrderSync {
 			return;
 		}
 
-		if ( ! $this->already_created( $order ) || $this->already_marked_paid( $order ) ) {
+		if ( ! $this->invoices->is_created( $order ) || $this->income->is_recorded( $order ) ) {
 			return;
 		}
 
@@ -76,15 +74,9 @@ final class OrderSync {
 	public function create_invoice( int $order_id ): void {
 		$order = wc_get_order( $order_id );
 
-		if ( ! $order instanceof WC_Order ) {
-			return;
+		if ( $order instanceof WC_Order ) {
+			$this->invoices->sync( $order );
 		}
-
-		$client     = new Client( ApiKey::get() );
-		$mapper     = new InvoiceMapper();
-		$invoice_id = $this->ensure_invoice( $client, $mapper, $order );
-
-		$this->ensure_lines( $client, $mapper, $order, $invoice_id );
 	}
 
 	public function mark_paid( int $order_id ): void {
@@ -94,77 +86,9 @@ final class OrderSync {
 			return;
 		}
 
-		if ( ! $this->already_created( $order ) || $this->already_marked_paid( $order ) ) {
-			return;
+		if ( $this->invoices->is_created( $order ) && ! $this->income->is_recorded( $order ) ) {
+			$this->income->record( $order );
 		}
-
-		// TODO: confirm endpoints on docs.abby.fr — mark the invoice paid, then set
-		// PAID_SYNCED_META (feeds Abby's "livre de recettes").
-	}
-
-	private function ensure_invoice( Client $client, InvoiceMapper $mapper, WC_Order $order ): string {
-		$existing = (string) $order->get_meta( self::INVOICE_ID_META );
-
-		if ( '' !== $existing ) {
-			return $existing;
-		}
-
-		$contact_id = $this->resolve_contact( $client, $mapper, $order );
-
-		if ( null === $contact_id ) {
-			$this->fail( $order, 'contact resolution' );
-		}
-
-		$invoice_id = $client->create_invoice( $contact_id );
-
-		if ( null === $invoice_id ) {
-			$this->fail( $order, 'draft invoice creation' );
-		}
-
-		$order->update_meta_data( self::INVOICE_ID_META, $invoice_id );
-		$order->save();
-
-		return $invoice_id;
-	}
-
-	private function ensure_lines( Client $client, InvoiceMapper $mapper, WC_Order $order, string $invoice_id ): void {
-		if ( $this->already_synced_lines( $order ) ) {
-			return;
-		}
-
-		$lines = $mapper->invoice_lines( $order );
-
-		if ( array() === $lines ) {
-			return;
-		}
-
-		if ( ! $client->update_invoice_lines( $invoice_id, $lines ) ) {
-			$this->fail( $order, 'invoice lines update' );
-		}
-
-		$order->update_meta_data( self::LINES_SYNCED_META, 'yes' );
-		$order->save();
-	}
-
-	private function fail( WC_Order $order, string $step ): never {
-		// A thrown handler is recorded as "failed" by Action Scheduler.
-		throw new \RuntimeException(
-			esc_html( sprintf( 'Abby sync failed at %s for order %d.', $step, $order->get_id() ) )
-		);
-	}
-
-	private function resolve_contact( Client $client, InvoiceMapper $mapper, WC_Order $order ): ?string {
-		$email = $order->get_billing_email();
-
-		if ( '' !== $email ) {
-			$existing = $client->find_contact_id( $email );
-
-			if ( null !== $existing ) {
-				return $existing;
-			}
-		}
-
-		return $client->create_contact( $mapper->contact_payload( $order ) );
 	}
 
 	private function enqueue( string $hook, int $order_id ): void {
@@ -179,18 +103,6 @@ final class OrderSync {
 		}
 
 		as_enqueue_async_action( $hook, $args, self::ACTION_GROUP );
-	}
-
-	private function already_created( WC_Order $order ): bool {
-		return '' !== (string) $order->get_meta( self::INVOICE_ID_META );
-	}
-
-	private function already_synced_lines( WC_Order $order ): bool {
-		return '' !== (string) $order->get_meta( self::LINES_SYNCED_META );
-	}
-
-	private function already_marked_paid( WC_Order $order ): bool {
-		return '' !== (string) $order->get_meta( self::PAID_SYNCED_META );
 	}
 
 	private function is_draft_order( WC_Order $order ): bool {

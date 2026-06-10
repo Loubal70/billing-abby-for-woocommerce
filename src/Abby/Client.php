@@ -21,37 +21,36 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Client {
 
-	private const BASE_URL = 'https://api.app-abby.com';
+	private const BASE_URL      = 'https://api.app-abby.com';
+	private const CONTACTS_PATH = '/contacts';
+	private const CONTACT_PATH  = '/contact';
+	private const BILLING_PATH  = '/v2/billing';
+	private const INCOME_PATH   = '/incomeBook';
 
 	public function __construct( private readonly string $api_key ) {}
 
-	/**
-	 * Check the API key against a lightweight endpoint.
-	 *
-	 * @return string One of: valid, invalid, forbidden, error.
-	 */
-	public function validate_key(): string {
+	public function validate_key(): KeyStatus {
 		$response = $this->get_contacts();
 
 		if ( is_wp_error( $response ) ) {
-			return 'error';
+			return KeyStatus::ERROR;
 		}
 
 		$code = (int) wp_remote_retrieve_response_code( $response );
 
 		if ( $code >= 200 && $code < 300 ) {
-			return 'valid';
+			return KeyStatus::VALID;
 		}
 
 		if ( 401 === $code ) {
-			return 'invalid';
+			return KeyStatus::INVALID;
 		}
 
 		if ( 403 === $code ) {
-			return 'forbidden';
+			return KeyStatus::FORBIDDEN;
 		}
 
-		return 'error';
+		return KeyStatus::ERROR;
 	}
 
 	public function find_contact_id( string $email ): ?string {
@@ -62,21 +61,26 @@ final class Client {
 	}
 
 	public function create_contact( array $payload ): ?string {
-		return $this->create_abby_resource( '/contact', $payload );
+		return $this->create_abby_resource( self::CONTACT_PATH, $payload );
 	}
 
 	public function create_invoice( string $customer_id ): ?string {
-		return $this->create_abby_resource( '/v2/billing/invoice/' . rawurlencode( $customer_id ) );
+		return $this->create_abby_resource( self::BILLING_PATH . '/invoice/' . rawurlencode( $customer_id ) );
 	}
 
 	public function update_invoice_lines( string $invoice_id, array $lines ): bool {
 		$response = $this->request(
 			'PATCH',
-			'/v2/billing/' . rawurlencode( $invoice_id ) . '/lines',
+			self::BILLING_PATH . '/' . rawurlencode( $invoice_id ) . '/lines',
 			array( 'body' => array( 'lines' => $lines ) )
 		);
 
 		return null !== $this->decode( $response );
+	}
+
+	public function record_income( array $payload ): ?string {
+		// The income book returns the new entry under `_id`, not `id`.
+		return $this->create_abby_resource( self::INCOME_PATH, $payload, '_id' );
 	}
 
 	private function get_contacts( ?string $search = null ): array|WP_Error {
@@ -89,7 +93,7 @@ final class Client {
 			$query['search'] = $search;
 		}
 
-		return $this->request( 'GET', '/contacts', array( 'query' => $query ) );
+		return $this->request( 'GET', self::CONTACTS_PATH, array( 'query' => $query ) );
 	}
 
 	private function request( string $method, string $path, array $options = array() ): array|WP_Error {
@@ -140,14 +144,15 @@ final class Client {
 	/**
 	 * Create a resource on Abby via POST and return its id.
 	 *
-	 * @param string                    $path Abby endpoint path.
-	 * @param array<string, mixed>|null $body Optional JSON request body.
+	 * @param string                    $path   Abby endpoint path.
+	 * @param array<string, mixed>|null $body   Optional JSON request body.
+	 * @param string                    $id_key Response key holding the new id ('id', or '_id' for the income book).
 	 * @return string|null The created resource id, or null on failure.
 	 */
-	private function create_abby_resource( string $path, ?array $body = null ): ?string {
+	private function create_abby_resource( string $path, ?array $body = null, string $id_key = 'id' ): ?string {
 		$options = null !== $body ? array( 'body' => $body ) : array();
 		$data    = $this->decode( $this->request( 'POST', $path, $options ) );
-		$id      = $data['id'] ?? null;
+		$id      = $data[ $id_key ] ?? null;
 
 		return is_string( $id ) ? $id : null;
 	}

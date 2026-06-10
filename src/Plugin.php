@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace Rankea\BillingAbby;
 
-use Rankea\BillingAbby\Admin\Settings;
+use Rankea\BillingAbby\Admin\ProductFields;
+use Rankea\BillingAbby\Admin\SettingsPage;
+use Rankea\BillingAbby\Admin\SettingsRestController;
 use Rankea\BillingAbby\Sync\OrderSync;
 
 defined( 'ABSPATH' ) || exit;
@@ -48,7 +50,9 @@ final class Plugin {
 	}
 
 	private function init(): void {
-		( new Settings( $this ) )->register();
+		( new SettingsPage( $this ) )->register();
+		( new SettingsRestController() )->register();
+		( new ProductFields() )->register();
 		( new OrderSync() )->register();
 	}
 }

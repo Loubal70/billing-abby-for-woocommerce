@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin settings screen (React panel + REST endpoint).
+ * REST endpoints backing the settings panel.
  *
  * @package Rankea\BillingAbby
  */
@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Rankea\BillingAbby\Admin;
 
 use Rankea\BillingAbby\Abby\Client;
-use Rankea\BillingAbby\Plugin;
+use Rankea\BillingAbby\Abby\ProductType;
 use Rankea\BillingAbby\Support\ApiKey;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -19,71 +19,16 @@ use WP_REST_Server;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * WooCommerce sub-page + REST endpoint for the Abby API key (capability + nonce protected).
+ * Reads and writes the Abby settings (API key + default income type), capability + nonce
+ * protected, and tests the API connection.
  */
-final class Settings {
+final class SettingsRestController {
 
 	private const CAPABILITY     = 'manage_woocommerce';
-	private const PAGE_SLUG      = 'bafw-settings';
 	private const REST_NAMESPACE = 'bafw/v1';
-	private const SCRIPT_HANDLE  = 'bafw-settings';
-
-	private string $hook_suffix = '';
-
-	public function __construct( private readonly Plugin $plugin ) {}
 
 	public function register(): void {
-		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
-	}
-
-	public function add_menu_page(): void {
-		$this->hook_suffix = (string) add_submenu_page(
-			'woocommerce',
-			__( 'Billing Abby', 'billing-abby-for-woocommerce' ),
-			__( 'Billing Abby', 'billing-abby-for-woocommerce' ),
-			self::CAPABILITY,
-			self::PAGE_SLUG,
-			array( $this, 'render_page' )
-		);
-	}
-
-	public function render_page(): void {
-		printf(
-			'<div class="wrap"><h1>%s</h1><div id="bafw-settings-root"></div></div>',
-			esc_html__( 'Billing Abby for WooCommerce', 'billing-abby-for-woocommerce' )
-		);
-	}
-
-	public function enqueue_assets( string $hook_suffix ): void {
-		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
-			return;
-		}
-
-		$asset_path = $this->plugin->dir() . 'build/settings.asset.php';
-
-		if ( ! is_readable( $asset_path ) ) {
-			return;
-		}
-
-		$asset = require $asset_path;
-
-		wp_enqueue_script(
-			self::SCRIPT_HANDLE,
-			$this->plugin->url() . 'build/settings.js',
-			$asset['dependencies'],
-			$asset['version'],
-			true
-		);
-		wp_set_script_translations( self::SCRIPT_HANDLE, 'billing-abby-for-woocommerce' );
-		wp_enqueue_style(
-			self::SCRIPT_HANDLE,
-			$this->plugin->url() . 'build/style-settings.css',
-			array( 'wp-components' ),
-			$asset['version']
-		);
-		wp_style_add_data( self::SCRIPT_HANDLE, 'rtl', 'replace' );
 	}
 
 	public function register_routes(): void {
@@ -103,10 +48,15 @@ final class Settings {
 					'permission_callback' => array( $this, 'check_permission' ),
 					'show_in_index'       => false,
 					'args'                => array(
-						'api_key' => array(
+						'api_key'      => array(
 							'type'              => 'string',
-							'required'          => true,
+							'required'          => false,
 							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'product_type' => array(
+							'type'              => 'integer',
+							'required'          => false,
+							'sanitize_callback' => 'absint',
 						),
 					),
 				),
@@ -134,9 +84,17 @@ final class Settings {
 	}
 
 	public function update_settings( WP_REST_Request $request ): WP_REST_Response {
-		$api_key = trim( (string) $request->get_param( 'api_key' ) );
+		$api_key = $request->get_param( 'api_key' );
 
-		ApiKey::save( $api_key );
+		if ( is_string( $api_key ) && '' !== trim( $api_key ) ) {
+			ApiKey::save( trim( $api_key ) );
+		}
+
+		$product_type = $request->get_param( 'product_type' );
+
+		if ( null !== $product_type && null !== ProductType::tryFrom( (int) $product_type ) ) {
+			update_option( ProductType::OPTION, (int) $product_type );
+		}
 
 		return rest_ensure_response( $this->current_state() );
 	}
@@ -144,15 +102,17 @@ final class Settings {
 	public function test_connection(): WP_REST_Response {
 		$status = ( new Client( ApiKey::get() ) )->validate_key();
 
-		return rest_ensure_response( array( 'status' => $status ) );
+		return rest_ensure_response( array( 'status' => $status->value ) );
 	}
 
 	private function current_state(): array {
 		$api_key = ApiKey::get();
 
 		return array(
-			'api_key_set'    => '' !== $api_key,
-			'api_key_masked' => $this->mask( $api_key ),
+			'api_key_set'          => '' !== $api_key,
+			'api_key_masked'       => $this->mask( $api_key ),
+			'product_type'         => (int) get_option( ProductType::OPTION, ProductType::GOODS->value ),
+			'product_type_options' => ProductType::options(),
 		);
 	}
 

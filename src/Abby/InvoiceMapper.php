@@ -9,13 +9,14 @@ declare(strict_types=1);
 
 namespace Rankea\BillingAbby\Abby;
 
+use Rankea\BillingAbby\Support\Money;
 use WC_Order;
 use WC_Order_Item;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Builds the Abby request payloads from a WooCommerce order.
+ * Builds the Abby contact and draft-invoice-line payloads from a WooCommerce order.
  */
 final class InvoiceMapper {
 
@@ -75,22 +76,10 @@ final class InvoiceMapper {
 		return array(
 			'designation'   => $item->get_name(),
 			'quantity'      => $quantity,
-			'unitPrice'     => $this->to_cents( $net / $quantity ),
+			'unitPrice'     => Money::to_cents( $net / $quantity ),
 			'isTaxIncluded' => false,
 			'vatCode'       => $this->vat_code( $net, (float) $item->get_total_tax() ),
 		);
-	}
-
-	/**
-	 * Convert a euro amount to the integer cents Abby's unitPrice expects.
-	 *
-	 * Rounding before the int cast avoids float drift (15.00 * 100 can be 1499.999…).
-	 *
-	 * @param float $amount Amount in euros.
-	 * @return int Amount in cents.
-	 */
-	private function to_cents( float $amount ): int {
-		return (int) round( $amount * 100 );
 	}
 
 	private function vat_code( float $net, float $tax ): string {
