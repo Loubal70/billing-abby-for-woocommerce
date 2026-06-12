@@ -11,7 +11,6 @@ namespace Rankea\BillingAbby\Abby;
 
 use Rankea\BillingAbby\Support\Money;
 use WC_Order;
-use WC_Order_Item;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -105,7 +104,14 @@ final class InvoiceMapper {
 			$quantity = (float) $item->get_quantity();
 
 			if ( $quantity > 0.0 ) {
-				$lines[] = $this->line( $item, $quantity );
+				// Coupons live in the subtotal/total gap: keep the original price, show the discount.
+				$lines[] = $this->line(
+					$item->get_name(),
+					$quantity,
+					(float) $item->get_subtotal(),
+					(float) $item->get_total(),
+					(float) $item->get_total_tax()
+				);
 			}
 		}
 
@@ -115,27 +121,38 @@ final class InvoiceMapper {
 	private function shipping_lines( WC_Order $order ): array {
 		$lines = array();
 
-		// Shipping is an accessory to the sale: its own line, at the rate WC already applied.
+		// A free-shipping coupon zeroes this total, so a discounted shipping line just drops out.
 		foreach ( $order->get_shipping_methods() as $shipping ) {
-			if ( (float) $shipping->get_total() > 0.0 ) {
-				$lines[] = $this->line( $shipping, 1.0 );
+			$total = (float) $shipping->get_total();
+
+			if ( $total > 0.0 ) {
+				$lines[] = $this->line( $shipping->get_name(), 1.0, $total, $total, (float) $shipping->get_total_tax() );
 			}
 		}
 
 		return $lines;
 	}
 
-	private function line( WC_Order_Item $item, float $quantity ): array {
-		// Amount is net (ex-tax, after discounts), split across the quantity, in cents.
-		$net = (float) $item->get_total();
-
-		return array(
-			'designation'   => $item->get_name(),
+	private function line( string $name, float $quantity, float $gross, float $net, float $tax ): array {
+		$line = array(
+			'designation'   => $name,
 			'quantity'      => $quantity,
-			'unitPrice'     => Money::to_cents( $net / $quantity ),
+			'unitPrice'     => Money::to_cents( $gross / $quantity ),
 			'isTaxIncluded' => false,
-			'vatCode'       => $this->vat_code( $net, (float) $item->get_total_tax() ),
+			'vatCode'       => $this->vat_code( $net, $tax ),
 		);
+
+		$discount = round( $gross - $net, 2 );
+
+		if ( $discount > 0.0 ) {
+			// The discount amount is in cents, like unitPrice (confirmed live: euros are read as cents).
+			$line['discount'] = array(
+				'mode'   => DiscountMode::AMOUNT->value,
+				'amount' => Money::to_cents( $discount ),
+			);
+		}
+
+		return $line;
 	}
 
 	private function vat_code( float $net, float $tax ): string {

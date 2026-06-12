@@ -12,6 +12,8 @@ namespace Rankea\BillingAbby\Sync;
 use Rankea\BillingAbby\Abby\Client;
 use Rankea\BillingAbby\Abby\InvoiceMapper;
 use Rankea\BillingAbby\Support\ApiKey;
+use Rankea\BillingAbby\Support\Money;
+use Rankea\BillingAbby\Support\SyncLog;
 use WC_Order;
 
 defined( 'ABSPATH' ) || exit;
@@ -38,6 +40,34 @@ final class InvoiceSync {
 		$invoice_id = $this->ensure_invoice( $client, $mapper, $order );
 
 		$this->ensure_lines( $client, $mapper, $order, $invoice_id );
+		$this->verify_total( $client, $order, $invoice_id );
+	}
+
+	private function verify_total( Client $client, WC_Order $order, string $invoice_id ): void {
+		$invoice    = $client->get_invoice( $invoice_id );
+		$abby_cents = $invoice['total']['amountWithTaxAfterDiscount'] ?? null;
+
+		// A read-only cross-check: if the invoice can't be read, the sync still succeeded.
+		if ( ! is_int( $abby_cents ) ) {
+			return;
+		}
+
+		$wc_cents = Money::to_cents( (float) $order->get_total() );
+
+		// The invoice must match the order to the cent; flag any difference, never tolerate one.
+		if ( $abby_cents === $wc_cents ) {
+			return;
+		}
+
+		$message = sprintf(
+			'Abby invoice total (%1$d cents) does not match order %2$d total (%3$d cents).',
+			$abby_cents,
+			$order->get_id(),
+			$wc_cents
+		);
+
+		SyncLog::error( $order->get_id(), $message );
+		$order->add_order_note( $message );
 	}
 
 	private function ensure_invoice( Client $client, InvoiceMapper $mapper, WC_Order $order ): string {
@@ -72,7 +102,12 @@ final class InvoiceSync {
 			return;
 		}
 
-		$lines = $mapper->invoice_lines( $order );
+		try {
+			// Log an unmappable VAT rate instead of failing silently out of the async action.
+			$lines = $mapper->invoice_lines( $order );
+		} catch ( \DomainException $e ) {
+			$this->fail( $order, 'invoice line mapping' );
+		}
 
 		if ( array() === $lines ) {
 			return;

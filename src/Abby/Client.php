@@ -87,6 +87,10 @@ final class Client {
 		return null !== $this->decode( $response );
 	}
 
+	public function get_invoice( string $invoice_id ): ?array {
+		return $this->decode( $this->request( 'GET', self::BILLING_PATH . '/' . rawurlencode( $invoice_id ) ) );
+	}
+
 	public function record_income( array $payload ): ?string {
 		// The income book returns the new entry under `_id`, not `id`.
 		return $this->create_abby_resource( self::INCOME_PATH, $payload, '_id' );

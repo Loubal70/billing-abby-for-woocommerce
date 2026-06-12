@@ -38,10 +38,6 @@ final class Plugin {
 
 	private function __construct( private readonly string $plugin_file ) {}
 
-	public function file(): string {
-		return $this->plugin_file;
-	}
-
 	public function dir(): string {
 		return plugin_dir_path( $this->plugin_file );
 	}
