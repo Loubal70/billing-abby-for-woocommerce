@@ -26,6 +26,7 @@ final class InvoiceSync {
 
 	private const INVOICE_ID_META   = '_bafw_abby_invoice_id';
 	private const LINES_SYNCED_META = '_bafw_abby_lines_synced';
+	private const CONTACT_ID_META   = '_bafw_abby_contact_id';
 
 	public function is_created( WC_Order $order ): bool {
 		return '' !== (string) $order->get_meta( self::INVOICE_ID_META );
@@ -88,16 +89,67 @@ final class InvoiceSync {
 	}
 
 	private function resolve_contact( Client $client, InvoiceMapper $mapper, WC_Order $order ): ?string {
+		// Abby's contact search matches names, not emails (and has no email filter), so a
+		// contact cannot be looked up by email via the API. Reuse the id we stored on a
+		// previous order for the same customer instead, to avoid creating duplicates.
+		$payload  = $mapper->contact_payload( $order );
+		$existing = $this->known_contact_id( $order );
+
+		if ( null !== $existing ) {
+			// Keep the contact in sync with the order's latest details (address, phone…).
+			$client->update_contact( $existing, $payload );
+			$this->store_contact_id( $order, $existing );
+
+			return $existing;
+		}
+
+		$contact_id = $client->create_contact( $payload );
+
+		if ( null !== $contact_id ) {
+			$this->store_contact_id( $order, $contact_id );
+		}
+
+		return $contact_id;
+	}
+
+	private function known_contact_id( WC_Order $order ): ?string {
+		// This order's own id first, in case a previous attempt created the contact but failed
+		// before the invoice was created.
+		$own = (string) $order->get_meta( self::CONTACT_ID_META );
+
+		if ( '' !== $own ) {
+			return $own;
+		}
+
 		$email = $order->get_billing_email();
 
-		if ( '' !== $email ) {
-			$existing = $client->find_contact_id( $email );
+		if ( '' === $email ) {
+			return null;
+		}
 
-			if ( null !== $existing ) {
-				return $existing;
+		$prior = wc_get_orders(
+			array(
+				'billing_email' => $email,
+				'exclude'       => array( $order->get_id() ),
+				'limit'         => 10,
+				'orderby'       => 'date',
+				'order'         => 'DESC',
+			)
+		);
+
+		foreach ( $prior as $other ) {
+			$id = (string) $other->get_meta( self::CONTACT_ID_META );
+
+			if ( '' !== $id ) {
+				return $id;
 			}
 		}
 
-		return $client->create_contact( $mapper->contact_payload( $order ) );
+		return null;
+	}
+
+	private function store_contact_id( WC_Order $order, string $contact_id ): void {
+		$order->update_meta_data( self::CONTACT_ID_META, $contact_id );
+		$order->save();
 	}
 }

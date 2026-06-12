@@ -53,15 +53,24 @@ final class Client {
 		return KeyStatus::ERROR;
 	}
 
-	public function find_contact_id( string $email ): ?string {
-		$data = $this->decode( $this->get_contacts( $email ) );
-		$id   = $data['docs'][0]['id'] ?? null;
-
-		return is_string( $id ) ? $id : null;
-	}
-
 	public function create_contact( array $payload ): ?string {
 		return $this->create_abby_resource( self::CONTACT_PATH, $payload );
+	}
+
+	/**
+	 * Overwrite a contact with the latest details (Abby uses PUT, not PATCH).
+	 *
+	 * @param string               $id      Abby contact id.
+	 * @param array<string, mixed> $payload Full contact payload.
+	 */
+	public function update_contact( string $id, array $payload ): bool {
+		$response = $this->request(
+			'PUT',
+			self::CONTACT_PATH . '/' . rawurlencode( $id ),
+			array( 'body' => $payload )
+		);
+
+		return null !== $this->decode( $response );
 	}
 
 	public function create_invoice( string $customer_id ): ?string {
@@ -83,17 +92,17 @@ final class Client {
 		return $this->create_abby_resource( self::INCOME_PATH, $payload, '_id' );
 	}
 
-	private function get_contacts( ?string $search = null ): array|WP_Error {
-		$query = array(
-			'page'  => 1,
-			'limit' => 1,
+	private function get_contacts(): array|WP_Error {
+		return $this->request(
+			'GET',
+			self::CONTACTS_PATH,
+			array(
+				'query' => array(
+					'page'  => 1,
+					'limit' => 1,
+				),
+			)
 		);
-
-		if ( null !== $search ) {
-			$query['search'] = $search;
-		}
-
-		return $this->request( 'GET', self::CONTACTS_PATH, array( 'query' => $query ) );
 	}
 
 	private function request( string $method, string $path, array $options = array() ): array|WP_Error {

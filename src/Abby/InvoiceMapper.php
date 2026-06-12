@@ -32,7 +32,63 @@ final class InvoiceMapper {
 			$payload['emails'] = array( $email );
 		}
 
+		$phone = $order->get_billing_phone();
+
+		if ( '' !== $phone ) {
+			$payload['phone'] = $phone;
+		}
+
+		$billing = $this->address( $order->get_address( 'billing' ) );
+
+		if ( null !== $billing ) {
+			$payload['billingAddress'] = $billing;
+		}
+
+		$delivery = $this->address( $order->get_address( 'shipping' ) );
+
+		if ( null !== $delivery ) {
+			$payload['deliveryAddress'] = $delivery;
+		}
+
 		return $payload;
+	}
+
+	/**
+	 * Map a WooCommerce address to an Abby address, or null when it is incomplete.
+	 *
+	 * @param array<string, mixed> $wc A WC_Order::get_address() result.
+	 * @return array<string, string>|null Abby requires address, city, zipCode and country.
+	 */
+	private function address( array $wc ): ?array {
+		$line1   = (string) ( $wc['address_1'] ?? '' );
+		$city    = (string) ( $wc['city'] ?? '' );
+		$zip     = (string) ( $wc['postcode'] ?? '' );
+		$country = (string) ( $wc['country'] ?? '' );
+
+		if ( '' === $line1 || '' === $city || '' === $zip || '' === $country ) {
+			return null;
+		}
+
+		$address = array(
+			'address' => $line1,
+			'city'    => $city,
+			'zipCode' => $zip,
+			'country' => $country,
+		);
+
+		$complement = (string) ( $wc['address_2'] ?? '' );
+
+		if ( '' !== $complement ) {
+			$address['complement'] = $complement;
+		}
+
+		$state = (string) ( $wc['state'] ?? '' );
+
+		if ( '' !== $state ) {
+			$address['state'] = $state;
+		}
+
+		return $address;
 	}
 
 	public function invoice_lines( WC_Order $order ): array {
