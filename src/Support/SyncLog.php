@@ -110,6 +110,21 @@ final class SyncLog {
 		);
 	}
 
+	public static function last_for_order( int $order_id ): ?array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table; a live status panel must not be cached.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT id, order_id, message, created_at FROM %i WHERE order_id = %d ORDER BY id DESC LIMIT 1',
+				self::table(),
+				$order_id
+			)
+		);
+
+		return $row instanceof \stdClass ? self::format_row( $row ) : null;
+	}
+
 	public static function schedule_pruning(): void {
 		if ( ! function_exists( 'as_schedule_recurring_action' ) || ! function_exists( 'as_next_scheduled_action' ) ) {
 			return;
