@@ -11,6 +11,7 @@ namespace Rankea\BillingAbby\Abby;
 
 use Rankea\BillingAbby\Support\Money;
 use WC_Order;
+use WC_Order_Item;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -103,16 +104,18 @@ final class InvoiceMapper {
 		foreach ( $order->get_items() as $item ) {
 			$quantity = (float) $item->get_quantity();
 
-			if ( $quantity > 0.0 ) {
-				// Coupons live in the subtotal/total gap: keep the original price, show the discount.
-				$lines[] = $this->line(
-					$item->get_name(),
-					$quantity,
-					(float) $item->get_subtotal(),
-					(float) $item->get_total(),
-					(float) $item->get_total_tax()
-				);
+			if ( $quantity <= 0.0 ) {
+				continue;
 			}
+
+			// Read WooCommerce's own per-unit price in the shop's tax base; never recompute it.
+			$lines[] = $this->line(
+				$item->get_name(),
+				$quantity,
+				$order->get_item_subtotal( $item, $this->prices_include_tax(), false ),
+				$this->vat_code( (float) $item->get_total(), (float) $item->get_total_tax() ),
+				$this->line_discount( $order, $item )
+			);
 		}
 
 		return $lines;
@@ -121,38 +124,58 @@ final class InvoiceMapper {
 	private function shipping_lines( WC_Order $order ): array {
 		$lines = array();
 
-		// A free-shipping coupon zeroes this total, so a discounted shipping line just drops out.
 		foreach ( $order->get_shipping_methods() as $shipping ) {
-			$total = (float) $shipping->get_total();
+			$total = $order->get_line_total( $shipping, $this->prices_include_tax(), false );
 
 			if ( $total > 0.0 ) {
-				$lines[] = $this->line( $shipping->get_name(), 1.0, $total, $total, (float) $shipping->get_total_tax() );
+				$lines[] = $this->line(
+					$shipping->get_name(),
+					1.0,
+					$total,
+					$this->vat_code( (float) $shipping->get_total(), (float) $shipping->get_total_tax() )
+				);
 			}
 		}
 
 		return $lines;
 	}
 
-	private function line( string $name, float $quantity, float $gross, float $net, float $tax ): array {
+	/**
+	 * The coupon discount WooCommerce already computed for the line (subtotal − total), in cents.
+	 *
+	 * Rounds the difference once, not each term, to avoid a double-rounding cent.
+	 */
+	private function line_discount( WC_Order $order, WC_Order_Item $item ): int {
+		$inc_tax = $this->prices_include_tax();
+
+		return Money::to_cents(
+			$order->get_line_subtotal( $item, $inc_tax, false ) - $order->get_line_total( $item, $inc_tax, false )
+		);
+	}
+
+	private function line( string $name, float $quantity, float $unit_price, string $vat_code, int $discount = 0 ): array {
 		$line = array(
 			'designation'   => $name,
 			'quantity'      => $quantity,
-			'unitPrice'     => Money::to_cents( $gross / $quantity ),
-			'isTaxIncluded' => false,
-			'vatCode'       => $this->vat_code( $net, $tax ),
+			// WooCommerce's unit price in cents, kept at Abby's max precision (1 decimal) so that
+			// round(unitPrice * quantity) lands back on the exact amount the customer paid.
+			'unitPrice'     => round( $unit_price * 100, 1 ),
+			'isTaxIncluded' => $this->prices_include_tax(),
+			'vatCode'       => $vat_code,
 		);
 
-		$discount = round( $gross - $net, 2 );
-
-		if ( $discount > 0.0 ) {
-			// The discount amount is in cents, like unitPrice (confirmed live: euros are read as cents).
+		if ( $discount > 0 ) {
 			$line['discount'] = array(
 				'mode'   => DiscountMode::AMOUNT->value,
-				'amount' => Money::to_cents( $discount ),
+				'amount' => $discount,
 			);
 		}
 
 		return $line;
+	}
+
+	private function prices_include_tax(): bool {
+		return wc_prices_include_tax();
 	}
 
 	private function vat_code( float $net, float $tax ): string {

@@ -34,6 +34,14 @@ final class InvoiceSync {
 		return '' !== (string) $order->get_meta( self::INVOICE_ID_META );
 	}
 
+	public function invoice_id( WC_Order $order ): string {
+		return (string) $order->get_meta( self::INVOICE_ID_META );
+	}
+
+	public function has_synced_lines( WC_Order $order ): bool {
+		return '' !== (string) $order->get_meta( self::LINES_SYNCED_META );
+	}
+
 	public function sync( WC_Order $order ): void {
 		$client     = new Client( ApiKey::get() );
 		$mapper     = new InvoiceMapper();
@@ -71,7 +79,7 @@ final class InvoiceSync {
 	}
 
 	private function ensure_invoice( Client $client, InvoiceMapper $mapper, WC_Order $order ): string {
-		$existing = (string) $order->get_meta( self::INVOICE_ID_META );
+		$existing = $this->invoice_id( $order );
 
 		if ( '' !== $existing ) {
 			return $existing;
@@ -98,7 +106,7 @@ final class InvoiceSync {
 	}
 
 	private function ensure_lines( Client $client, InvoiceMapper $mapper, WC_Order $order, string $invoice_id ): void {
-		if ( '' !== (string) $order->get_meta( self::LINES_SYNCED_META ) ) {
+		if ( $this->has_synced_lines( $order ) ) {
 			return;
 		}
 
@@ -123,10 +131,12 @@ final class InvoiceSync {
 		$order->add_order_note( __( 'Abby: invoice lines synced.', 'billing-abby-for-woocommerce' ) );
 	}
 
+	/**
+	 * Resolves the order's Abby contact id. Abby's contact search matches names, not emails (and
+	 * has no email filter), so a contact cannot be looked up by email via the API — reuse the id
+	 * stored on a previous order for the same customer instead, to avoid creating duplicates.
+	 */
 	private function resolve_contact( Client $client, InvoiceMapper $mapper, WC_Order $order ): ?string {
-		// Abby's contact search matches names, not emails (and has no email filter), so a
-		// contact cannot be looked up by email via the API. Reuse the id we stored on a
-		// previous order for the same customer instead, to avoid creating duplicates.
 		$payload  = $mapper->contact_payload( $order );
 		$existing = $this->known_contact_id( $order );
 
@@ -147,9 +157,11 @@ final class InvoiceSync {
 		return $contact_id;
 	}
 
+	/**
+	 * The Abby contact id known for this customer: the order's own meta first (a prior attempt may
+	 * have created the contact before the invoice), then a previous order with the same email.
+	 */
 	private function known_contact_id( WC_Order $order ): ?string {
-		// This order's own id first, in case a previous attempt created the contact but failed
-		// before the invoice was created.
 		$own = (string) $order->get_meta( self::CONTACT_ID_META );
 
 		if ( '' !== $own ) {

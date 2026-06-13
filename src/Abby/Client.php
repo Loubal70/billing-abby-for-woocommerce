@@ -91,8 +91,14 @@ final class Client {
 		return $this->decode( $this->request( 'GET', self::BILLING_PATH . '/' . rawurlencode( $invoice_id ) ) );
 	}
 
+	public function download_invoice( string $invoice_id ): ?string {
+		return $this->body( $this->request( 'GET', self::BILLING_PATH . '/' . rawurlencode( $invoice_id ) . '/download' ) );
+	}
+
+	/**
+	 * Records an income-book entry. Abby returns the new entry under `_id`, not `id`.
+	 */
 	public function record_income( array $payload ): ?string {
-		// The income book returns the new entry under `_id`, not `id`.
 		return $this->create_abby_resource( self::INCOME_PATH, $payload, '_id' );
 	}
 
@@ -109,8 +115,10 @@ final class Client {
 		);
 	}
 
+	/**
+	 * Sends an authenticated Abby request. $options accepts optional 'query' and 'body' arrays.
+	 */
 	private function request( string $method, string $path, array $options = array() ): array|WP_Error {
-		// $options accepts optional 'query' and 'body' arrays.
 		if ( '' === $this->api_key ) {
 			return new WP_Error( 'bafw_missing_key', 'No Abby API key configured.' );
 		}
@@ -139,6 +147,18 @@ final class Client {
 	}
 
 	private function decode( array|WP_Error $response ): ?array {
+		$body = $this->body( $response );
+
+		if ( null === $body ) {
+			return null;
+		}
+
+		$data = json_decode( $body, true );
+
+		return is_array( $data ) ? $data : null;
+	}
+
+	private function body( array|WP_Error $response ): ?string {
 		if ( is_wp_error( $response ) ) {
 			return null;
 		}
@@ -149,9 +169,9 @@ final class Client {
 			return null;
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		$body = wp_remote_retrieve_body( $response );
 
-		return is_array( $data ) ? $data : null;
+		return '' === $body ? null : $body;
 	}
 
 	/**

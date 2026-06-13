@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Rankea\BillingAbby;
 
+use Rankea\BillingAbby\Admin\OrderInvoicePanel;
 use Rankea\BillingAbby\Admin\ProductFields;
 use Rankea\BillingAbby\Admin\SettingsPage;
 use Rankea\BillingAbby\Admin\SettingsRestController;
@@ -50,10 +51,13 @@ final class Plugin {
 	private function init(): void {
 		SyncLog::register();
 
+		$orders = new OrderSync();
+		$orders->register();
+
 		( new SettingsPage( $this ) )->register();
 		( new SetupWizard( $this ) )->register();
 		( new SettingsRestController() )->register();
 		( new ProductFields() )->register();
-		( new OrderSync() )->register();
+		( new OrderInvoicePanel( $orders ) )->register();
 	}
 }

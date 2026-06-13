@@ -26,8 +26,13 @@ enum VatCode: string {
 	case INTRA_EU = 'FR_00UE';
 	case EXPORT   = 'FR_0HUE';
 
+	/**
+	 * Maps a VAT percentage to its Abby code. INTRA_EU / EXPORT (0%) need order context we don't
+	 * derive yet, so they stay unused here.
+	 *
+	 * @throws \DomainException When the rate has no Abby VAT code.
+	 */
 	public static function from_rate( float $rate ): self {
-		// INTRA_EU / EXPORT (0%) need order context we don't derive yet, so they stay unused here.
 		return match ( $rate ) {
 			20.0    => self::RATE_20,
 			10.0    => self::RATE_10,
