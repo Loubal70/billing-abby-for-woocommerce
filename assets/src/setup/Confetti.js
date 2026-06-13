@@ -3,7 +3,14 @@
  */
 import { useState } from '@wordpress/element';
 
-const COLORS = [ '#0075eb', '#00a32a', '#f0b849', '#e0556b', '#7b61ff', '#19c37d' ];
+const COLORS = [
+	'#0075eb',
+	'#00a32a',
+	'#f0b849',
+	'#e0556b',
+	'#7b61ff',
+	'#19c37d',
+];
 const COUNT = 70;
 
 function makePieces() {
