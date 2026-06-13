@@ -61,8 +61,11 @@ final class IncomeMapper {
 		return $groups;
 	}
 
+	/**
+	 * Adds shipping to the income groups, spread across them by their net share — it is accessory
+	 * to the sale rather than its own income type.
+	 */
 	private function with_shipping( WC_Order $order, array $groups ): array {
-		// Shipping is accessory to the sale: spread across the groups by their net share.
 		$net       = (float) $order->get_shipping_total();
 		$tax       = (float) $order->get_shipping_tax();
 		$total_net = array_sum( array_column( $groups, 'net' ) );
@@ -81,11 +84,15 @@ final class IncomeMapper {
 	}
 
 	private function entry( WC_Order $order, int $product_type, array $amount ): array {
+		// Round the parts, then sum for the total, so priceWithoutTax + vatAmount == priceTotalTax.
+		$net_cents = Money::to_cents( $amount['net'] );
+		$tax_cents = Money::to_cents( $amount['tax'] );
+
 		return array(
 			'client'            => $this->client_name( $order ),
-			'priceWithoutTax'   => Money::to_cents( $amount['net'] ),
-			'priceTotalTax'     => Money::to_cents( $amount['net'] + $amount['tax'] ),
-			'vatAmount'         => Money::to_cents( $amount['tax'] ),
+			'priceWithoutTax'   => $net_cents,
+			'priceTotalTax'     => $net_cents + $tax_cents,
+			'vatAmount'         => $tax_cents,
 			'productType'       => $product_type,
 			'paidAt'            => $this->paid_date( $order ),
 			'paymentMethodUsed' => array( 'value' => self::PAYMENT_METHOD_TRANSFER ),
