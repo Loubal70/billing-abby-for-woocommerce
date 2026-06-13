@@ -47,7 +47,7 @@ This data is sent only to Abby, and only when an order triggers a synchronizatio
 1. Upload the plugin files to the `/wp-content/plugins/billing-abby-for-woocommerce` directory, or install the plugin through the WordPress Plugins screen.
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 3. Make sure WooCommerce is installed and active.
-4. Enter your Abby API key in the plugin settings (added in a later release).
+4. Enter your Abby API key in the plugin settings.
 
 == Frequently Asked Questions ==
 
@@ -66,4 +66,10 @@ No. It is an independent connector developed by Rankea. The names "Abby" and "Wo
 == Changelog ==
 
 = 0.1.0 =
-* Initial scaffolding and project foundations (Phase 0).
+* Sync paid WooCommerce orders to Abby as draft invoices, sent directly to the Abby API.
+* Settings panel to store and validate the Abby API key and pick the default income category.
+* Line mapping with VAT, a dedicated shipping line, and coupon discounts; amounts match the order to the cent.
+* Records paid orders in the Abby income book, with a per-product income category override.
+* Order-screen panel: Abby sync status, manual retry, and invoice PDF download.
+* Error log with manual retry; idempotent sync (no duplicate invoices).
+* First-run setup wizard. HPOS compatible.

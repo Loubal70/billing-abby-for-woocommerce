@@ -1,66 +1,76 @@
 # ROADMAP — Billing Abby for WooCommerce
 
-Priorités calées sur (a) les frictions réelles du forum Abby autour de l'intégration
-WooCommerce, (b) la barre posée par le concurrent SaaS *Order Invoicer*, (c) la réforme
-française de la facturation électronique (septembre 2026). Différenciation : **plugin natif,
-sans abonnement tiers, données qui ne transitent pas par un cloud externe**.
+Priorities driven by (a) the real friction points raised on the Abby forum around the
+WooCommerce integration, (b) the bar set by the SaaS competitor *Order Invoicer*, and (c) the
+French e-invoicing reform (September 2026). Differentiator: **native plugin, no third-party
+subscription, data that never transits through an external cloud**.
 
-## Phase 0 — Fondations (infra)
+> **Status (2026-06-13):** Phase 0 done; Phase 1 (MVP) done; Phase 2 largely done (refunds and
+> document language remain). Order → invoice/income amounts are verified to match the WooCommerce
+> order to the cent (HT, TTC + VAT, percentage coupons).
 
-- [ ] Scaffolding via `wp scaffold plugin billing-abby-for-woocommerce … --ci=github`
-- [ ] En-tête complet : `Requires PHP: 8.2`, `Requires at least: 6.4`, `Requires Plugins: woocommerce`, GPL-2.0-or-later
-- [ ] Composer + autoload PSR-4 (`Rankea\BillingAbby\`)
-- [ ] WPCS + PHPCompatibility (`testVersion 8.2-`) + PHPUnit
-- [ ] GitHub Actions : matrice `php: ['8.2', '8.4']`, phpcs + phpunit + Plugin Check
-- [ ] Déclaration de compatibilité HPOS
-- [ ] `readme.txt` conforme (section service externe Abby + non-affiliation)
+## Phase 0 — Foundations (infra)
 
-## Phase 1 — MVP : commande → facture brouillon
+- [x] Scaffolding (`billing-abby-for-woocommerce`, `--ci=github`)
+- [x] Full header: `Requires PHP: 8.2`, `Requires at least: 6.4`, `Requires Plugins: woocommerce`, GPL-2.0-or-later
+- [x] Composer + PSR-4 autoload (`Rankea\BillingAbby\`)
+- [x] WPCS + PHPCompatibility (`testVersion 8.2-`) + PHPUnit
+- [x] GitHub Actions: `php: ['8.2', '8.4']` matrix, phpcs + phpunit + Plugin Check
+- [x] HPOS compatibility declaration
+- [x] WP.org-compliant `readme.txt` (external-service Abby section + non-affiliation)
 
-- [ ] Page de réglages (onglet WooCommerce) : saisie + validation de la clé API Abby
-- [ ] Client API Abby (`wp_remote_*`), gestion d'erreurs + retries
-- [ ] Mapping commande → document : lignes produits, quantités, montants
-- [ ] Création/rapprochement du contact client dans Abby
-- [ ] Déclenchement async (Action Scheduler) sur statut configurable (`completed` par défaut)
-- [ ] Statut de synchro visible sur la fiche commande
+## Phase 1 — MVP: order → draft invoice
 
-## Phase 2 — Robustesse (pièges connus du forum)
+- [x] Settings page (React panel): enter + validate the Abby API key
+- [x] Abby API client (`wp_remote_*`), error handling
+- [x] Order → document mapping: product lines, quantities, amounts (amount conformity verified)
+- [x] Create / reconcile the customer contact in Abby (dedup by stored id, no email lookup)
+- [x] Async trigger (Action Scheduler) — two-flow: draft per order on placement, mark paid on payment
+- [x] Sync status on the order screen (status + manual retry + view-PDF meta box)
+- [x] First-run setup wizard (onboarding) — *bonus, not in the original plan*
 
-- [ ] **Détection d'un contact déjà existant** (éviter les doublons)
-- [ ] Ligne de **frais de port** avec le bon taux de TVA
-- [ ] **Remboursements (partiels/total) → avoirs** Abby
-- [ ] Option **« marquer comme payée »** → **livre de recettes**
-- [ ] **Franchise en base de TVA** (auto-entrepreneurs non assujettis)
-- [ ] **Langue du document** : détecter la langue de la commande (Polylang / WPML / locale
-      client WooCommerce) et la transmettre à Abby (Abby est multilingue) — champ à confirmer sur docs.abby.fr
-- [ ] Journal d'événements + ré-essai manuel ; idempotence (pas de double facture sur retry/webhook)
+## Phase 2 — Robustness (known forum pitfalls)
 
-## Phase 3 — Conformité & réforme 2026
+- [x] **Detect an already-existing contact** (avoid duplicates)
+- [x] **Shipping line** with the correct VAT rate
+- [ ] **Refunds (partial/total) → Abby credit notes** *(not started)*
+- [x] Option **"mark as paid"** → **income book** (livre de recettes)
+- [~] **VAT franchise en base** (non-VAT-registered sole traders): the mapper handles franchise
+      accounts (no VAT applied); see the planned VAT-declaration alert below
+- [ ] **Document language**: detect the order language (Polylang / WPML / WooCommerce customer
+      locale) and pass it to Abby — field to confirm on docs.abby.fr *(not started)*
+- [x] Event log + manual retry; idempotency (no duplicate invoice on retry)
+- [ ] Settings UI for the trigger status / require-paid options (currently option defaults only)
 
-- [ ] Alignement facturation électronique obligatoire (Abby = Plateforme Agréée)
-- [ ] Mentions légales obligatoires sur les documents
-- [ ] Multi-statuts (micro, EI, EURL…) selon profil Abby
-- [ ] Doc utilisateur (prérequis : API sur forfait Abby Pro+)
+## Phase 3 — Compliance & 2026 reform
+
+- [ ] **VAT-declaration alert**: ask Abby whether the shop must declare VAT, cache the result,
+      and notify the merchant when it changes *(planned — see project memory)*
+- [ ] Mandatory e-invoicing alignment (Abby = approved platform / Plateforme Agréée)
+- [ ] Mandatory legal mentions on the documents
+- [ ] Multi-status support (micro, EI, EURL…) per the Abby profile
+- [ ] User documentation (prerequisite: API on an Abby Pro+ plan)
 
 ## Phase 4 — Distribution & acquisition
 
-- [ ] Accord écrit Abby sur l'usage du nom
-- [ ] Soumission WP.org (2FA, Plugin Check vert, slugs réservés vérifiés)
-- [ ] Landing SEO `rankea.agency/tools/...` (français — le slug étant en anglais)
-- [ ] Freemium : gratuit (MVP) + PRO (avoirs, multi-statut, TVA avancée, multilingue)
-- [ ] FAQ / comparatif honnête vs Make et vs Order Invoicer
+- [ ] Written Abby agreement on using the name
+- [ ] WP.org submission (2FA, green Plugin Check, reserved slugs verified)
+- [ ] SEO landing `rankea.agency/tools/...` (French — the slug being English)
+- [ ] Freemium: free (MVP) + PRO (credit notes, multi-status, advanced VAT, multilingual)
+- [ ] Honest FAQ / comparison vs Make and vs Order Invoicer
 
-## Phase 5 — Pérennité
+## Phase 5 — Sustainability
 
-- [ ] i18n complète : `en_US` source + `fr_FR` livré, autres langues via translate.wordpress.org
-- [ ] Tests sur le mapping TVA/montants (zone à risque)
-- [ ] Télémétrie strictement opt-in (si utile)
-- [ ] Veille API Abby + compat WooCommerce (HPOS, blocs checkout) à chaque release
+- [ ] Full i18n: `en_US` source + `fr_FR` shipped, other locales via translate.wordpress.org
+- [~] Tests on VAT/amount mapping (risk area): proven live; PHPUnit cases still skipped (WC not
+      loaded in the test harness)
+- [ ] Strictly opt-in telemetry (if useful)
+- [ ] Watch the Abby API + WooCommerce compatibility (HPOS, checkout blocks) at each release
 
 ---
 
-### Hors périmètre (pour l'instant)
+### Out of scope (for now)
 
-Synchro stock bidirectionnelle, multi-comptes Abby, autres plateformes e-commerce. À
-reconsidérer seulement si la traction le justifie (marché étroit : intersection « utilise
-Abby » × « sous WooCommerce » × « prêt à installer un plugin »).
+Two-way stock sync, multiple Abby accounts, other e-commerce platforms. To reconsider only if
+traction justifies it (narrow market: the intersection of "uses Abby" × "runs WooCommerce" ×
+"willing to install a plugin").
