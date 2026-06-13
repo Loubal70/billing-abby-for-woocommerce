@@ -16,45 +16,8 @@ import {
 } from '@wordpress/components';
 import { Icon, check } from '@wordpress/icons';
 import { saveApiKey, testConnection } from '../api';
-
-const DOCS_URL = 'https://docs.abby.fr/api/authentification';
-
-function connectionNotice( status ) {
-	switch ( status ) {
-		case 'valid':
-			return {
-				status: 'success',
-				message: __(
-					'Connection successful.',
-					'billing-abby-for-woocommerce'
-				),
-			};
-		case 'invalid':
-			return {
-				status: 'error',
-				message: __(
-					'Invalid API key.',
-					'billing-abby-for-woocommerce'
-				),
-			};
-		case 'forbidden':
-			return {
-				status: 'error',
-				message: __(
-					'Your Abby plan does not allow API access (Pro or higher required).',
-					'billing-abby-for-woocommerce'
-				),
-			};
-		default:
-			return {
-				status: 'error',
-				message: __(
-					'Could not reach Abby. Please try again.',
-					'billing-abby-for-woocommerce'
-				),
-			};
-	}
-}
+import { connectionNotice } from '../connection-status';
+import { DOCS_API_KEY_URL } from '../links';
 
 export default function ConnectionCard( {
 	settings,
@@ -198,7 +161,7 @@ export default function ConnectionCard( {
 							'No API key yet?',
 							'billing-abby-for-woocommerce'
 						) }{ ' ' }
-						<ExternalLink href={ DOCS_URL }>
+						<ExternalLink href={ DOCS_API_KEY_URL }>
 							{ __(
 								'How to create an Abby API key',
 								'billing-abby-for-woocommerce'

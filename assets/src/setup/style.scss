@@ -1,0 +1,380 @@
+$bafw-accent: #0075eb;
+$bafw-accent-dark: #0066cf;
+
+body.bafw-setup-fullscreen {
+	#wpadminbar,
+	#adminmenumain,
+	#adminmenuback,
+	#adminmenuwrap {
+		display: none;
+	}
+}
+
+.bafw-setup {
+	--bafw-ease-out: cubic-bezier( 0.23, 1, 0.32, 1 );
+
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	display: flex;
+	flex-direction: column;
+	background: #f0f0f0;
+	font-size: 14px;
+
+	&__loading {
+		position: fixed;
+		inset: 0;
+		z-index: 100000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #f0f0f0;
+	}
+
+	&__header {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: 48px;
+		padding: 0 24px;
+		background: #1e1e1e;
+	}
+
+	&__logo {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		color: #fff;
+		font-weight: 600;
+	}
+
+	&__logo-mark {
+		display: block;
+		width: 20px;
+		height: 20px;
+		object-fit: contain;
+	}
+
+	&__exit {
+		padding: 4px 8px;
+		border: none;
+		background: none;
+		color: #a7aaad;
+		font-size: 13px;
+		cursor: pointer;
+
+		&:hover {
+			color: #fff;
+		}
+	}
+
+	&__progress {
+		flex: 0 0 auto;
+		height: 4px;
+		overflow: hidden;
+		background: #333;
+	}
+
+	&__progress-fill {
+		width: 100%;
+		height: 100%;
+		border-radius: 0 2px 2px 0;
+		background: $bafw-accent;
+		transform-origin: left;
+		transition: transform 300ms var( --bafw-ease-out );
+	}
+
+	&__content {
+		flex: 1 1 auto;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	&__inner {
+		width: 100%;
+		padding: 40px 20px;
+		box-sizing: border-box;
+
+		@media ( min-width: 768px ) {
+			max-width: 60%;
+		}
+	}
+
+	&__step-enter {
+		animation: bafw-fade-up 260ms var( --bafw-ease-out ) both;
+	}
+
+	&__notice {
+		margin-bottom: 24px;
+
+		.components-notice {
+			margin: 0;
+			border-radius: 4px;
+		}
+	}
+
+	&__title {
+		margin: 0 0 8px;
+		color: #1e1e1e;
+		font-size: 24px;
+		font-weight: 600;
+		text-align: center;
+	}
+
+	&__subtitle {
+		margin: 0 auto 28px;
+		max-width: 440px;
+		color: #757575;
+		text-align: center;
+	}
+
+	&__welcome,
+	&__done {
+		text-align: center;
+	}
+
+	&__timeline {
+		display: flex;
+		margin: 8px 0 0;
+		padding: 0;
+		list-style: none;
+		text-align: left;
+	}
+
+	&__tl-item {
+		position: relative;
+		flex: 1 1 0;
+		padding-right: 24px;
+
+		&:last-child {
+			padding-right: 0;
+		}
+
+		&:not( :last-child )::after {
+			content: '';
+			position: absolute;
+			top: 19px;
+			left: 48px;
+			right: 0;
+			height: 2px;
+			background: #dcdcde;
+		}
+	}
+
+	&__tl-badge {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		margin-bottom: 18px;
+		border-radius: 50%;
+		background: #e0e0e0;
+		color: #757575;
+		font-size: 15px;
+		font-weight: 600;
+	}
+
+	&__tl-step {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: #8a94a6;
+	}
+
+	&__tl-title {
+		margin: 0 0 8px;
+		font-size: 16px;
+		font-weight: 600;
+		color: #1e1e1e;
+	}
+
+	&__tl-desc {
+		margin: 0;
+		font-size: 13px;
+		line-height: 1.5;
+		color: #50575e;
+	}
+
+	&__saved-icon {
+		display: inline-flex;
+		color: $bafw-accent;
+	}
+
+	&__confetti {
+		position: fixed;
+		top: 46%;
+		left: 50%;
+		z-index: -1;
+		pointer-events: none;
+	}
+
+	&__confetti-piece {
+		position: absolute;
+		top: 0;
+		left: 0;
+		animation-name: bafw-confetti-x;
+		animation-timing-function: ease-out;
+		animation-iteration-count: 1;
+		animation-fill-mode: forwards;
+	}
+
+	&__confetti-shard {
+		display: block;
+		width: 7px;
+		height: 13px;
+		border-radius: 2px;
+		animation-name: bafw-confetti-y;
+		animation-timing-function: linear;
+		animation-iteration-count: 1;
+		animation-fill-mode: forwards;
+	}
+
+	&__done-check {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 72px;
+		height: 72px;
+		margin: 0 auto 24px;
+		border-radius: 50%;
+		background: #00a32a;
+		color: #fff;
+		animation: bafw-check-pop 420ms var( --bafw-ease-out ) 120ms both;
+
+		svg {
+			fill: currentColor;
+		}
+	}
+
+	&__saved {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 0 16px;
+	}
+
+	&__actions {
+		margin-top: 16px;
+	}
+
+	&__footer {
+		flex: 0 0 auto;
+		padding: 16px 24px;
+		background: #fff;
+		border-top: 1px solid #e0e0e0;
+	}
+
+	&__footer-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.components-button {
+		transition: transform 140ms var( --bafw-ease-out );
+
+		&:active:not( :disabled ) {
+			transform: scale( 0.97 );
+		}
+	}
+
+	.components-button.is-primary {
+		background: $bafw-accent;
+
+		&:hover:not( :disabled ) {
+			background: $bafw-accent-dark;
+		}
+	}
+}
+
+@keyframes bafw-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY( 8px );
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY( 0 );
+	}
+}
+
+@keyframes bafw-check-pop {
+	0% {
+		opacity: 0;
+		transform: scale( 0.7 );
+	}
+
+	60% {
+		opacity: 1;
+		transform: scale( 1.08 );
+	}
+
+	100% {
+		transform: scale( 1 );
+	}
+}
+
+@keyframes bafw-confetti-x {
+	to {
+		transform: translateX( var( --x ) );
+	}
+}
+
+@keyframes bafw-confetti-y {
+	0% {
+		opacity: 1;
+		transform: translateY( 0 ) rotate( 0deg );
+		animation-timing-function: cubic-bezier( 0.12, 0.7, 0.3, 1 );
+	}
+
+	40% {
+		opacity: 1;
+		transform: translateY( var( --peak ) ) rotate( calc( var( --r ) / 3 ) );
+		animation-timing-function: cubic-bezier( 0.55, 0, 0.85, 0.5 );
+	}
+
+	100% {
+		opacity: 0;
+		transform: translateY( var( --fall ) ) rotate( var( --r ) );
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.bafw-setup__step-enter,
+	.bafw-setup__done-check {
+		animation: bafw-fade 200ms ease both;
+	}
+
+	.bafw-setup__progress-fill {
+		transition: none;
+	}
+
+	.bafw-setup .components-button:active:not( :disabled ) {
+		transform: none;
+	}
+
+	.bafw-setup__confetti {
+		display: none;
+	}
+}
+
+@keyframes bafw-fade {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}

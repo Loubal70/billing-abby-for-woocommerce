@@ -77,6 +77,17 @@ final class SettingsRestController {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/setup-complete',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'complete_setup' ),
+				'permission_callback' => array( $this, 'check_permission' ),
+				'show_in_index'       => false,
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/logs',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -127,6 +138,12 @@ final class SettingsRestController {
 		$status = ( new Client( ApiKey::get() ) )->validate_key();
 
 		return rest_ensure_response( array( 'status' => $status->value ) );
+	}
+
+	public function complete_setup(): WP_REST_Response {
+		SetupWizard::mark_complete();
+
+		return rest_ensure_response( array( 'complete' => true ) );
 	}
 
 	public function get_logs( WP_REST_Request $request ): WP_REST_Response {

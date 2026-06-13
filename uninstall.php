@@ -12,6 +12,8 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 delete_option( 'bafw_abby_api_key' );
 delete_option( 'bafw_product_type' );
 delete_option( 'bafw_sync_log_db_version' );
+delete_option( 'bafw_setup_complete' );
+delete_transient( 'bafw_setup_redirect' );
 
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( 'bafw_prune_sync_log', array(), 'billing-abby' );

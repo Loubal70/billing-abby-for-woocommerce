@@ -12,5 +12,6 @@ module.exports = {
 			'assets/src/settings',
 			'index.js'
 		),
+		setup: path.resolve( process.cwd(), 'assets/src/setup', 'index.js' ),
 	},
 };
