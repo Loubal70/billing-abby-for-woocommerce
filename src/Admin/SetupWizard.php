@@ -47,9 +47,11 @@ final class SetupWizard {
 		add_filter( 'admin_body_class', array( $this, 'add_body_class' ) );
 	}
 
+	/**
+	 * Registers the hidden wizard page. 'options.php' is not a rendered menu, so the page stays out
+	 * of every menu while keeping a native title and capability check (an empty parent would lose both).
+	 */
 	public function add_page(): void {
-		// 'options.php' is not a rendered menu, so the page stays out of every menu while keeping
-		// a native title and capability check (an empty parent would lose both).
 		$this->hook_suffix = (string) add_submenu_page(
 			'options.php',
 			__( 'Billing Abby setup', 'billing-abby-for-woocommerce' ),

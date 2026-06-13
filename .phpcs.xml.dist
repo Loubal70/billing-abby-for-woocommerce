@@ -26,6 +26,9 @@
 		<!-- File headers kept (WP standard); method/property docblocks optional with strict typing. -->
 		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
 		<exclude name="Squiz.Commenting.VariableComment.Missing"/>
+		<!-- PHP 8.2 native types make @param/@return redundant: allow description-only PHPDoc. -->
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
