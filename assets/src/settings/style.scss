@@ -5,6 +5,12 @@
 
 	&__notice {
 		margin-bottom: 16px;
+
+		.components-notice {
+			margin: 0;
+			border-radius: 4px;
+			box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.06 );
+		}
 	}
 
 	&__status {
@@ -18,5 +24,41 @@
 
 	&__actions {
 		margin-top: 16px;
+	}
+
+	&__intro {
+		margin: 0 0 12px;
+		color: #50575e;
+	}
+}
+
+// Desktop: Abby income 25% / sync errors 75%, side by side. Stacked below (cards keep
+// their own top margin), so the grid spacing only applies at the breakpoint.
+.bafw-grid {
+	@media ( min-width: 1100px ) {
+		display: grid;
+		grid-template-columns: 1fr 3fr;
+		gap: 20px;
+		align-items: start;
+		margin-top: 20px;
+
+		.bafw-settings__card {
+			margin-top: 0;
+		}
+	}
+}
+
+.bafw-log {
+	margin-top: 4px;
+
+	td {
+		vertical-align: top;
+	}
+
+	&__nav {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-top: 14px;
 	}
 }
