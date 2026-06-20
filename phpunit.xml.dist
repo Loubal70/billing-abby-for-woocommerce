@@ -3,10 +3,9 @@
 	bootstrap="tests/bootstrap.php"
 	backupGlobals="false"
 	colors="true"
-	convertErrorsToExceptions="true"
-	convertWarningsToExceptions="true"
-	convertNoticesToExceptions="true"
-	convertDeprecationsToExceptions="true"
+	failOnRisky="true"
+	failOnWarning="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
 	>
 	<testsuites>
 		<testsuite name="testing">

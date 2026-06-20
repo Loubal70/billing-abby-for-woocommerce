@@ -39,8 +39,8 @@ When an order reaches the configured status, the plugin sends the data needed to
 This data is sent only to Abby, and only when an order triggers a synchronization. Your Abby API key is used to authenticate these requests.
 
 * Service provider: Abby — https://abby.fr
-* Terms of service: https://abby.fr/cgu
-* Privacy policy: https://abby.fr/politique-de-confidentialite
+* Terms of service: https://abby.fr/legals/cguv
+* Privacy policy: https://abby.fr/legals/confidentiality
 
 == Installation ==
 

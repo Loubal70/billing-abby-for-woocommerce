@@ -34,15 +34,45 @@ if ( ! file_exists( "{$bafw_tests_dir}/includes/functions.php" ) ) {
 require_once "{$bafw_tests_dir}/includes/functions.php";
 
 /**
- * Manually load the plugin being tested.
+ * Manually load WooCommerce (a hard dependency) and the plugin being tested.
  */
 function bafw_manually_load_plugin() {
+	// Set the base before WC boots: it freezes WC_TAX_ROUNDING_MODE from this option, so the
+	// inclusive run (BAFW_PRICES_INCLUDE_TAX=1) rounds tax like a real inclusive shop.
+	if ( '1' === getenv( 'BAFW_PRICES_INCLUDE_TAX' ) ) {
+		update_option( 'woocommerce_prices_include_tax', 'yes' );
+	}
+
+	// Local (DDEV): WooCommerce sits next to this plugin. CI provides WC_PLUGIN_PATH instead.
+	$bafw_woocommerce = getenv( 'WC_PLUGIN_PATH' );
+
+	if ( ! $bafw_woocommerce ) {
+		$bafw_woocommerce = dirname( __DIR__, 2 ) . '/woocommerce/woocommerce.php';
+	}
+
+	if ( file_exists( $bafw_woocommerce ) ) {
+		require $bafw_woocommerce;
+	}
+
 	require dirname( __DIR__ ) . '/billing-abby-for-woocommerce.php';
 }
 
 tests_add_filter( 'muplugins_loaded', 'bafw_manually_load_plugin' );
 
+// WooCommerce needs its tables installed in the test database before the suite runs.
+tests_add_filter(
+	'setup_theme',
+	function () {
+		if ( class_exists( 'WC_Install' ) ) {
+			WC_Install::install();
+		}
+	}
+);
+
 // Start up the WP testing environment.
 require "{$bafw_tests_dir}/includes/bootstrap.php";
+
+// Shared base test case (not auto-loaded: it is not a "test-" prefixed file).
+require __DIR__ . '/includes/class-bafw-order-test-case.php';
 
 // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals
