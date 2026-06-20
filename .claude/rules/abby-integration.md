@@ -1,59 +1,59 @@
-# Règle — Intégration API Abby
+# Rule — Abby API integration
 
-> ⚠️ **Garde-fou** : noms d'endpoints, champs et formats exacts à confirmer sur
-> **https://docs.abby.fr** (et le module Make, qui reflète les actions disponibles). Ne jamais
-> inventer une route : sinon `// TODO: confirmer endpoint sur docs.abby.fr` et demander avant d'implémenter.
+> ⚠️ **Guardrail**: exact endpoint names, fields and formats to be confirmed on
+> **https://docs.abby.fr** (and the Make module, which mirrors the available actions). Never
+> invent a route: otherwise `// TODO: confirm endpoint on docs.abby.fr` and ask before implementing.
 
-## Authentification
+## Authentication
 
-- API par **clé API** générée depuis le compte Abby.
-- Accès API réservé aux **forfaits payants (Pro et +)** : le dire dans le readme, distinguer
-  dans l'UI « clé invalide » vs « forfait insuffisant ».
-- Valider la clé à l'enregistrement (appel léger). Stocker en option, masquée.
+- API via an **API key** generated from the Abby account.
+- API access restricted to **paid plans (Pro and up)**: state it in the readme, distinguish
+  in the UI "invalid key" vs "insufficient plan".
+- Validate the key on save (lightweight call). Store as an option, masked.
 
-## Modèle de données (à mapper)
+## Data model (to map)
 
-Commande WooCommerce → **document de facturation** Abby :
+WooCommerce order → Abby **billing document**:
 
-- **Contact / organisation** : le client. Rapprocher par email/identifiant pour **éviter les
-  doublons** (friction n°1 du forum).
-- **Document** : facture (ou devis selon réglage), créé en **brouillon** par défaut.
-- **Lignes** : produits + quantités + prix, **+ ligne de frais de port** avec son taux de TVA.
-- **Avoir** : pour un remboursement WooCommerce (partiel/total).
-- **Livre de recettes** : alimenté quand le document est **marqué comme payé**.
+- **Contact / organization**: the customer. Match by email/identifier to **avoid
+  duplicates** (friction #1 on the forum).
+- **Document**: invoice (or quote depending on the setting), created as a **draft** by default.
+- **Lines**: products + quantities + prices, **+ a shipping line** with its VAT rate.
+- **Credit note**: for a WooCommerce refund (partial/full).
+- **Income book**: fed when the document is **marked as paid**.
 
-## Langue du document (Abby est multilingue)
+## Document language (Abby is multilingual)
 
-- Distinct de l'i18n du plugin : ici c'est la langue de la **facture envoyée au client**.
-- Détecter la langue de la commande/du client dans cet ordre de priorité :
-  1. langue Polylang de la commande (`pll_get_post_language` / meta de commande),
-  2. langue WPML (meta `wpml_language` de la commande),
-  3. locale client WooCommerce (`get_user_locale` / `_wp_locale` de la commande),
-  4. repli : langue par défaut du compte Abby.
-- Transmettre cette langue à Abby **si l'API expose un champ langue/locale** sur le document
-  ou le contact — `// TODO: confirmer le champ sur docs.abby.fr`.
-- Objectif : ne pas facturer en français un client anglophone (ou l'inverse). Beaucoup de
-  boutiques cibles sont multilingues (Polylang/WPML).
+- Distinct from the plugin i18n: here it is the language of the **invoice sent to the customer**.
+- Detect the order/customer language in this priority order:
+  1. order Polylang language (`pll_get_post_language` / order meta),
+  2. WPML language (order `wpml_language` meta),
+  3. WooCommerce customer locale (`get_user_locale` / order `_wp_locale`),
+  4. fallback: the Abby account's default language.
+- Pass this language to Abby **if the API exposes a language/locale field** on the document
+  or the contact — `// TODO: confirm the field on docs.abby.fr`.
+- Goal: do not invoice an English-speaking customer in French (or the reverse). Many
+  target shops are multilingual (Polylang/WPML).
 
-## Flux de référence
+## Reference flow
 
-1. Statut déclencheur → enqueue async (Action Scheduler).
-2. Rapprocher/créer le contact (idempotent).
-3. `InvoiceMapper` : produits + port + TVA + **langue détectée**.
-4. Créer la **facture brouillon** ; stocker l'ID dans `_bafw_abby_invoice_id`.
-5. (Option marchand) marquer payée → livre de recettes.
-6. Remboursement WC → avoir.
+1. Trigger status → enqueue async (Action Scheduler).
+2. Match/create the contact (idempotent).
+3. `InvoiceMapper`: products + shipping + VAT + **detected language**.
+4. Create the **draft invoice**; store the ID in `_bafw_abby_invoice_id`.
+5. (Merchant option) mark paid → income book.
+6. WC refund → credit note.
 
-## Règles métier
+## Business rules
 
-- **Brouillon par défaut, toujours.** Finalisation auto seulement si le marchand l'a choisi
-  (une facture finalisée ne se supprime plus : il faut un avoir). Garde-fou comptable.
-- **TVA** : gérer la **franchise en base** (montants sans TVA, mentions adéquates) ; couvrir par tests.
-- **Idempotence** : jamais deux factures pour une commande (vérifier le méta avant tout appel).
-- **Erreurs/rate limit** : retries + backoff via Action Scheduler ; journaliser l'échec (sans la
-  clé API) ; ré-essai manuel depuis la fiche commande.
+- **Draft by default, always.** Auto-finalization only if the merchant chose it
+  (a finalized invoice can no longer be deleted: it requires a credit note). Accounting guardrail.
+- **VAT**: handle the **VAT-exempt regime (franchise en base)** (amounts without VAT, proper mentions); cover with tests.
+- **Idempotency**: never two invoices for one order (check the meta before any call).
+- **Errors/rate limit**: retries + backoff via Action Scheduler; log the failure (without the
+  API key); manual retry from the order screen.
 
-## Destinataire externe unique
+## Single external recipient
 
-Aucune donnée ne transite par un serveur tiers (ni Rankea, ni cloud) : seul destinataire
-externe = l'API Abby, déclaré dans le readme. C'est la promesse différenciante vs Make/Order Invoicer.
+No data passes through any third-party server (neither Rankea nor cloud): the only external
+recipient = the Abby API, declared in the readme. This is the differentiating promise vs Make/Order Invoicer.

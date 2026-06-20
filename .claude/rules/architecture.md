@@ -1,44 +1,44 @@
-# Règle — Architecture & arborescence
+# Rule — Architecture & file tree
 
-## Arborescence cible
+## Target file tree
 
 ```
 billing-abby-for-woocommerce/
-├── billing-abby-for-woocommerce.php    # entrée : header, garde ABSPATH, autoloader, register()
-├── uninstall.php                       # nettoyage options/scheduled actions
-├── composer.json                       # PSR-4 + outillage dev (WPCS, PHPUnit) — pas de dépendance runtime
-├── readme.txt                          # format WP.org (≠ README.md)
+├── billing-abby-for-woocommerce.php    # entry point: header, ABSPATH guard, autoloader, register()
+├── uninstall.php                       # cleanup of options/scheduled actions
+├── composer.json                       # PSR-4 + dev tooling (WPCS, PHPUnit) — no runtime dependency
+├── readme.txt                          # WP.org format (≠ README.md)
 ├── src/
-│   ├── Autoloader.php                  # autoloader PSR-4 maison (Rankea\BillingAbby\ → src/)
-│   ├── Bootstrap.php                   # final class : HPOS, garde WC, démarrage
-│   ├── Plugin.php                      # singleton, enregistre les hooks
-│   ├── Admin/Settings.php              # onglet réglages WooCommerce + clé API
-│   ├── Abby/Client.php                 # client HTTP (wp_remote_*), auth, erreurs
-│   ├── Abby/InvoiceMapper.php          # commande WC → payload document Abby
-│   ├── Sync/OrderSync.php              # hooks commande → enqueue async
-│   └── Sync/Webhooks.php               # réception + vérif signature (si utilisé)
+│   ├── Autoloader.php                  # home-grown PSR-4 autoloader (Rankea\BillingAbby\ → src/)
+│   ├── Bootstrap.php                   # final class: HPOS, WC guard, startup
+│   ├── Plugin.php                      # singleton, registers the hooks
+│   ├── Admin/Settings.php              # WooCommerce settings tab + API key
+│   ├── Abby/Client.php                 # HTTP client (wp_remote_*), auth, errors
+│   ├── Abby/InvoiceMapper.php          # WC order → Abby document payload
+│   ├── Sync/OrderSync.php              # order hooks → enqueue async
+│   └── Sync/Webhooks.php               # reception + signature check (if used)
 ├── languages/                          # en_US source + fr_FR
 └── tests/
 ```
 
-## Bootstrap (fichier principal)
+## Bootstrap (main file)
 
-- `defined('ABSPATH') || exit;` en tête.
-- En-tête complet (voir CLAUDE.md), dont `Requires Plugins: woocommerce`, `Text Domain: billing-abby-for-woocommerce`.
-- Le fichier d'entrée reste minimal : charger l'autoloader (`require src/Autoloader.php` +
-  `Autoloader::register()`) puis déléguer à `Bootstrap`. Aucun symbole global.
-- Vérifier WooCommerce avant init ; sinon admin notice + arrêt propre (dans `Bootstrap`).
+- `defined('ABSPATH') || exit;` at the top.
+- Full header (see CLAUDE.md), including `Requires Plugins: woocommerce`, `Text Domain: billing-abby-for-woocommerce`.
+- The entry file stays minimal: load the autoloader (`require src/Autoloader.php` +
+  `Autoloader::register()`) then delegate to `Bootstrap`. No global symbol.
+- Check WooCommerce before init; otherwise admin notice + clean stop (in `Bootstrap`).
 
-### Autoload — convention WP.org
+### Autoload — WP.org convention
 
-- **Composer en dev** (PSR-4, WPCS, PHPUnit) ; à l'exécution, **autoloader maison** (`src/Autoloader.php`).
-- Tant qu'il n'y a **aucune dépendance runtime**, ne pas livrer `vendor/` dans le build SVN
-  (`.distignore` l'exclut) : embarquer l'autoloader Composer pour ne charger que nos classes est
-  du bundling inutile que Plugin Check/les relecteurs pointent.
-- Le jour où une vraie lib runtime est ajoutée : basculer sur `composer install --no-dev
-  --optimize-autoloader` et inclure `vendor/` dans le build.
+- **Composer in dev** (PSR-4, WPCS, PHPUnit); at runtime, **home-grown autoloader** (`src/Autoloader.php`).
+- As long as there is **no runtime dependency**, do not ship `vendor/` in the SVN build
+  (`.distignore` excludes it): bundling the Composer autoloader just to load our own classes is
+  pointless bundling that Plugin Check/reviewers flag.
+- The day a real runtime lib is added: switch to `composer install --no-dev
+  --optimize-autoloader` and include `vendor/` in the build.
 
-## Compatibilité HPOS (obligatoire)
+## HPOS compatibility (mandatory)
 
 ```php
 add_action( 'before_woocommerce_init', function () {
@@ -50,28 +50,28 @@ add_action( 'before_woocommerce_init', function () {
 } );
 ```
 
-Ne jamais lire/écrire une commande via post meta en dur : `wc_get_order()`, méthodes de
-`WC_Order`, `OrderUtil` pour les tests de contexte.
+Never read/write an order via raw post meta: `wc_get_order()`, `WC_Order` methods,
+`OrderUtil` for context checks.
 
-## Stratégie de hooks
+## Hook strategy
 
-- Déclencheur sur statut : `woocommerce_order_status_completed` (configurable) ; sinon
+- Status trigger: `woocommerce_order_status_completed` (configurable); otherwise
   `woocommerce_order_status_changed`.
-- **Ne pas** appeler Abby dans le hook : enfiler une action async (`as_enqueue_async_action()`)
-  avec l'`order_id`.
-- **Idempotence** : méta `_bafw_abby_invoice_id` sur la commande ; si présent, ne pas recréer
-  (indispensable pour retries + webhooks).
+- **Do not** call Abby in the hook: enqueue an async action (`as_enqueue_async_action()`)
+  with the `order_id`.
+- **Idempotency**: `_bafw_abby_invoice_id` meta on the order; if present, do not recreate
+  (essential for retries + webhooks).
 
 ## Secrets
 
-- Clé API Abby en option WordPress, lecture réservée aux capacités admin. Jamais exposée
-  côté front, ni en URL, ni en log. Masquée dans l'UI.
-- Aucune donnée client envoyée à un tiers autre qu'Abby (cœur de la promesse).
+- Abby API key as a WordPress option, read restricted to admin capabilities. Never exposed
+  on the front end, in a URL, or in a log. Masked in the UI.
+- No customer data sent to any third party other than Abby (core of the promise).
 
-## Marques (rappel dur)
+## Trademarks (hard reminder)
 
-- Slug/dossier/fichier/text domain `billing-abby-for-woocommerce` — « billing » en tête
-  (générique), jamais « woo »/« abby »/« wordpress » au début.
-- « WooCommerce » / « Abby » seulement en mention de compatibilité, texte brut, pas de logo.
-- Mention « Not affiliated with Abby or Automattic » (header + readme).
-- Nom « Abby » dans le titre : à sécuriser par accord écrit Abby (ROADMAP P4).
+- Slug/folder/file/text domain `billing-abby-for-woocommerce` — "billing" leading
+  (generic), never "woo"/"abby"/"wordpress" at the start.
+- "WooCommerce" / "Abby" only as a compatibility mention, plain text, no logo.
+- "Not affiliated with Abby or Automattic" mention (header + readme).
+- "Abby" name in the title: to be secured by a written agreement with Abby (ROADMAP P4).

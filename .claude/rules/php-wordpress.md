@@ -1,46 +1,46 @@
-# Règle — PHP / WordPress / WooCommerce
+# Rule — PHP / WordPress / WooCommerce
 
-## Conventions de code
+## Code conventions
 
-- **WPCS** via PHP_CodeSniffer ; `phpcbf` pour l'autofix.
-- **PHPCompatibility** sur `testVersion 8.2-` dans `.phpcs.xml.dist`.
-- PHP 8.2+ autorisé (enums, readonly, unions, named args) ; ne pas dépasser 8.2 sans raison.
-- Préfixe partout : namespace `Rankea\BillingAbby\` (PSR-4) ; procédural `bafw_`.
+- **WPCS** via PHP_CodeSniffer; `phpcbf` for autofix.
+- **PHPCompatibility** on `testVersion 8.2-` in `.phpcs.xml.dist`.
+- PHP 8.2+ allowed (enums, readonly, unions, named args); do not go above 8.2 without a reason.
+- Prefix everywhere: namespace `Rankea\BillingAbby\` (PSR-4); procedural `bafw_`.
 
-## Sécurité (bloquant — catégorie Security de Plugin Check)
+## Security (blocking — Plugin Check Security category)
 
-- **Sanitize** toute entrée (`sanitize_text_field`, `sanitize_email`, `absint`…).
-- **Escape** toute sortie (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`).
-- **Nonces** + `current_user_can( 'manage_woocommerce' )` sur toute action admin.
-- HTTP via `wp_remote_get` / `wp_remote_post` (jamais cURL brut) ; vérifier le code HTTP + `is_wp_error()`.
-- `$wpdb->prepare` si SQL direct (à éviter — privilégier l'API WC/WP).
-- Webhooks entrants : vérifier la signature/secret avant traitement, rejeter sinon.
-- Jamais d'`eval`, de code distant exécuté, ni d'obfuscation base64.
+- **Sanitize** every input (`sanitize_text_field`, `sanitize_email`, `absint`…).
+- **Escape** every output (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`).
+- **Nonces** + `current_user_can( 'manage_woocommerce' )` on every admin action.
+- HTTP via `wp_remote_get` / `wp_remote_post` (never raw cURL); check the HTTP code + `is_wp_error()`.
+- `$wpdb->prepare` if direct SQL (to avoid — prefer the WC/WP API).
+- Incoming webhooks: verify the signature/secret before processing, reject otherwise.
+- Never `eval`, remote code execution, or base64 obfuscation.
 
-## Internationalisation — anglais par défaut
+## Internationalization — English by default
 
-- **Toutes les chaînes source en anglais (`en_US`)**, via `__()`, `esc_html__()`… avec le text
-  domain `billing-abby-for-woocommerce` (= slug → chargement auto par WP.org).
-- Pas de variable dans une chaîne traduisible : `printf` + placeholders.
-- Générer le `.pot` dans `languages/`, livrer `fr_FR.po/.mo`. Le français est une **traduction**,
-  pas la source. Les autres locales viennent de translate.wordpress.org une fois sur WP.org.
-- ⚠️ Ne pas confondre avec la **langue du document Abby** (facture envoyée au client) :
-  voir `@.claude/rules/abby-integration.md`.
+- **All source strings in English (`en_US`)**, via `__()`, `esc_html__()`… with the text
+  domain `billing-abby-for-woocommerce` (= slug → auto-loaded by WP.org).
+- No variable in a translatable string: `printf` + placeholders.
+- Generate the `.pot` in `languages/`, ship `fr_FR.po/.mo`. French is a **translation**,
+  not the source. Other locales come from translate.wordpress.org once on WP.org.
+- ⚠️ Do not confuse with the **Abby document language** (invoice sent to the customer):
+  see `@.claude/rules/abby-integration.md`.
 
-## Conformité dépôt WP.org (catégorie Plugin Repo)
+## WP.org repository compliance (Plugin Repo category)
 
-- Version du header = `Stable tag` du `readme.txt`.
-- `readme.txt` au format WP.org, avec une section **service externe Abby** : quelles données
-  sont envoyées, où, lien CGU/politique d'Abby (exigence Guidelines pour tout service tiers).
+- Header version = `Stable tag` of `readme.txt`.
+- `readme.txt` in WP.org format, with an **Abby external service** section: which data
+  is sent, where, link to Abby's terms/policy (Guidelines requirement for any third-party service).
 - GPL-2.0-or-later (`License` + `License URI`).
-- Pas de « phone home »/tracking sans opt-in explicite + divulgation. Assets embarqués.
+- No "phone home"/tracking without explicit opt-in + disclosure. Bundled assets.
 
 ## Performance
 
-- Aucun appel API Abby synchrone (checkout/page load) : Action Scheduler.
-- Pas de requête réseau sur `init`/`admin_init`. Chargement paresseux. Cache court côté lecture.
+- No synchronous Abby API call (checkout/page load): Action Scheduler.
+- No network request on `init`/`admin_init`. Lazy loading. Short cache on the read side.
 
-## Avant chaque PR
+## Before each PR
 
 ```bash
 ./vendor/bin/phpcs
@@ -51,6 +51,6 @@ wp plugin check billing-abby-for-woocommerce --categories=plugin_repo,security \
   --exclude-files=.phpcs.xml.dist,.editorconfig,.gitignore,.distignore,phpunit.xml.dist,CLAUDE.md,ROADMAP.md,README.md
 ```
 
-> Sans ces exclusions, Plugin Check signale les fichiers de **dev** (configs cachées, `tests/`,
-> `bin/`, `.github/`, `.claude/`, `CLAUDE.md`, `ROADMAP.md`) qui ne sont **pas** dans le zip livré.
-> Le build réellement distribué est vert (vérifiable via une copie élaguée + `--slug=...`).
+> Without these exclusions, Plugin Check flags **dev** files (hidden configs, `tests/`,
+> `bin/`, `.github/`, `.claude/`, `CLAUDE.md`, `ROADMAP.md`) that are **not** in the shipped zip.
+> The actually distributed build is green (verifiable via a pruned copy + `--slug=...`).
