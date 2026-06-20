@@ -125,7 +125,7 @@ final class InvoiceMapper {
 				continue;
 			}
 
-			$subtotal_cents = Money::to_cents( $order->get_line_subtotal( $item, $inc_tax, false ) );
+			$subtotal_cents = Money::to_cents( $order->get_line_subtotal( $item, $inc_tax ) );
 
 			$lines[] = $this->line(
 				$item->get_name(),
@@ -148,7 +148,7 @@ final class InvoiceMapper {
 		$lines = array();
 
 		foreach ( $order->get_fees() as $fee ) {
-			$total_cents = Money::to_cents( $order->get_line_total( $fee, $inc_tax, false ) );
+			$total_cents = Money::to_cents( $order->get_line_total( $fee, $inc_tax ) );
 
 			if ( 0 !== $total_cents ) {
 				$lines[] = $this->line(
@@ -167,7 +167,7 @@ final class InvoiceMapper {
 		$lines = array();
 
 		foreach ( $order->get_shipping_methods() as $shipping ) {
-			$total_cents = Money::to_cents( $order->get_line_total( $shipping, $inc_tax, false ) );
+			$total_cents = Money::to_cents( $order->get_line_total( $shipping, $inc_tax ) );
 
 			if ( $total_cents > 0 ) {
 				$lines[] = $this->line(
@@ -193,13 +193,12 @@ final class InvoiceMapper {
 	}
 
 	/**
-	 * The coupon discount WooCommerce already computed for the line (subtotal − total), in cents.
-	 *
-	 * Rounds the difference once, not each term, to avoid a double-rounding cent.
+	 * The coupon discount WooCommerce computed for the line: its subtotal minus its total, in cents,
+	 * each rounded by WooCommerce so the line matches the cents it charged.
 	 */
 	private function line_discount( WC_Order $order, WC_Order_Item $item, bool $inc_tax ): int {
 		return Money::to_cents(
-			$order->get_line_subtotal( $item, $inc_tax, false ) - $order->get_line_total( $item, $inc_tax, false )
+			$order->get_line_subtotal( $item, $inc_tax ) - $order->get_line_total( $item, $inc_tax )
 		);
 	}
 
