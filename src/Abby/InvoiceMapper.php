@@ -12,6 +12,7 @@ namespace Rankea\BillingAbby\Abby;
 use Rankea\BillingAbby\Support\Money;
 use WC_Order;
 use WC_Order_Item;
+use WC_Tax;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,6 +20,13 @@ defined( 'ABSPATH' ) || exit;
  * Builds the Abby contact and draft-invoice-line payloads from a WooCommerce order.
  */
 final class InvoiceMapper {
+
+	/**
+	 * Memoised rate id => VAT percent for the lines of one order build.
+	 *
+	 * @var array<int, float>
+	 */
+	private array $rate_percents = array();
 
 	public function contact_payload( WC_Order $order ): array {
 		$payload = array(
@@ -92,13 +100,22 @@ final class InvoiceMapper {
 	}
 
 	public function invoice_lines( WC_Order $order ): array {
-		return array_merge(
-			$this->product_lines( $order ),
-			$this->shipping_lines( $order )
+		$inc_tax = $this->prices_include_tax();
+
+		$lines = array_merge(
+			$this->product_lines( $order, $inc_tax ),
+			$this->fee_lines( $order, $inc_tax ),
+			$this->shipping_lines( $order, $inc_tax )
+		);
+
+		// One order has a single tax base, so the flag is the same on every line.
+		return array_map(
+			static fn ( array $line ): array => $line + array( 'isTaxIncluded' => $inc_tax ),
+			$lines
 		);
 	}
 
-	private function product_lines( WC_Order $order ): array {
+	private function product_lines( WC_Order $order, bool $inc_tax ): array {
 		$lines = array();
 
 		foreach ( $order->get_items() as $item ) {
@@ -108,31 +125,56 @@ final class InvoiceMapper {
 				continue;
 			}
 
-			// Read WooCommerce's own per-unit price in the shop's tax base; never recompute it.
+			$subtotal_cents = Money::to_cents( $order->get_line_subtotal( $item, $inc_tax, false ) );
+
 			$lines[] = $this->line(
 				$item->get_name(),
 				$quantity,
-				$order->get_item_subtotal( $item, $this->prices_include_tax(), false ),
-				$this->vat_code( (float) $item->get_total(), (float) $item->get_total_tax() ),
-				$this->line_discount( $order, $item )
+				$this->unit_price_cents( $subtotal_cents, $quantity ),
+				$this->vat_code_for( $item ),
+				$this->line_discount( $order, $item, $inc_tax )
 			);
 		}
 
 		return $lines;
 	}
 
-	private function shipping_lines( WC_Order $order ): array {
+	/**
+	 * Map order fees (surcharges, gift wrap, rebates) to invoice lines, one each like shipping.
+	 * A negative fee becomes a negative line — Abby accepts a negative unitPrice and applies the
+	 * matching negative VAT (live-confirmed), keeping the invoice total exact.
+	 */
+	private function fee_lines( WC_Order $order, bool $inc_tax ): array {
+		$lines = array();
+
+		foreach ( $order->get_fees() as $fee ) {
+			$total_cents = Money::to_cents( $order->get_line_total( $fee, $inc_tax, false ) );
+
+			if ( 0 !== $total_cents ) {
+				$lines[] = $this->line(
+					$fee->get_name(),
+					1.0,
+					$this->unit_price_cents( $total_cents, 1.0 ),
+					$this->vat_code_for( $fee )
+				);
+			}
+		}
+
+		return $lines;
+	}
+
+	private function shipping_lines( WC_Order $order, bool $inc_tax ): array {
 		$lines = array();
 
 		foreach ( $order->get_shipping_methods() as $shipping ) {
-			$total = $order->get_line_total( $shipping, $this->prices_include_tax(), false );
+			$total_cents = Money::to_cents( $order->get_line_total( $shipping, $inc_tax, false ) );
 
-			if ( $total > 0.0 ) {
+			if ( $total_cents > 0 ) {
 				$lines[] = $this->line(
 					$shipping->get_name(),
 					1.0,
-					$total,
-					$this->vat_code( (float) $shipping->get_total(), (float) $shipping->get_total_tax() )
+					$this->unit_price_cents( $total_cents, 1.0 ),
+					$this->vat_code_for( $shipping )
 				);
 			}
 		}
@@ -141,27 +183,32 @@ final class InvoiceMapper {
 	}
 
 	/**
+	 * The Abby unit price in cents, kept at Abby's maximum precision (1 decimal) and derived from
+	 * the line total WooCommerce charged so that round( unitPrice * quantity ) lands back on that
+	 * exact total. Dividing the rounded line total (rather than reading WooCommerce's reconstructed
+	 * per-unit price) keeps the sub-cent rounding from being amplified by the quantity.
+	 */
+	private function unit_price_cents( int $line_cents, float $quantity ): float {
+		return round( $line_cents / $quantity, 1 );
+	}
+
+	/**
 	 * The coupon discount WooCommerce already computed for the line (subtotal − total), in cents.
 	 *
 	 * Rounds the difference once, not each term, to avoid a double-rounding cent.
 	 */
-	private function line_discount( WC_Order $order, WC_Order_Item $item ): int {
-		$inc_tax = $this->prices_include_tax();
-
+	private function line_discount( WC_Order $order, WC_Order_Item $item, bool $inc_tax ): int {
 		return Money::to_cents(
 			$order->get_line_subtotal( $item, $inc_tax, false ) - $order->get_line_total( $item, $inc_tax, false )
 		);
 	}
 
-	private function line( string $name, float $quantity, float $unit_price, string $vat_code, int $discount = 0 ): array {
+	private function line( string $name, float $quantity, float $unit_price_cents, string $vat_code, int $discount = 0 ): array {
 		$line = array(
-			'designation'   => $name,
-			'quantity'      => $quantity,
-			// WooCommerce's unit price in cents, kept at Abby's max precision (1 decimal) so that
-			// round(unitPrice * quantity) lands back on the exact amount the customer paid.
-			'unitPrice'     => round( $unit_price * 100, 1 ),
-			'isTaxIncluded' => $this->prices_include_tax(),
-			'vatCode'       => $vat_code,
+			'designation' => $name,
+			'quantity'    => $quantity,
+			'unitPrice'   => $unit_price_cents,
+			'vatCode'     => $vat_code,
 		);
 
 		if ( $discount > 0 ) {
@@ -178,9 +225,31 @@ final class InvoiceMapper {
 		return wc_prices_include_tax();
 	}
 
-	private function vat_code( float $net, float $tax ): string {
-		$rate = $net > 0.0 ? round( $tax / $net * 100, 1 ) : 0.0;
+	/**
+	 * The Abby VAT code for a line, from the rate WooCommerce actually applied. Reading the rate from
+	 * the line's tax data (not inferring it from the rounded net/tax, which drifts off the scale for
+	 * small amounts and would reject e.g. a 1.30 EUR line) keeps a 20% line mapped to FR_2000.
+	 */
+	private function vat_code_for( WC_Order_Item $item ): string {
+		return VatCode::from_rate( $this->applied_rate( $item ) )->value;
+	}
 
-		return VatCode::from_rate( $rate )->value;
+	private function applied_rate( WC_Order_Item $item ): float {
+		$taxes = $item->get_taxes();
+		$rate  = 0.0;
+
+		foreach ( array_keys( $taxes['total'] ?? array() ) as $rate_id ) {
+			$rate += $this->rate_percent( $rate_id );
+		}
+
+		return round( $rate, 1 );
+	}
+
+	/**
+	 * The VAT percent of a tax rate id, memoised: WC_Tax::get_rate_percent_value queries the DB
+	 * uncached, and an order reuses the same one or two rate ids across all its lines.
+	 */
+	private function rate_percent( int $rate_id ): float {
+		return $this->rate_percents[ $rate_id ] ??= (float) WC_Tax::get_rate_percent_value( $rate_id );
 	}
 }
