@@ -32,12 +32,14 @@ jobs:
         run: composer phpcs
 
   phpunit:
-    name: Unit tests (PHP ${{ matrix.php-version }})
+    name: Unit tests (PHP ${{ matrix.php-version }}, ${{ matrix.tax-base }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         php-version: ['8.2', '8.4']
+        # WC_TAX_ROUNDING_MODE is frozen at boot from the tax base, so each base runs in its own pass.
+        tax-base: ['exclusive', 'inclusive']
     services:
       database:
         image: mysql:8.0
@@ -71,7 +73,15 @@ jobs:
       - name: Set up the WordPress test suite
         run: bash bin/install-wp-tests.sh wordpress_tests root root 127.0.0.1 latest true
 
+      - name: Install WooCommerce (hard dependency, loaded by the test bootstrap)
+        run: |
+          curl -sL https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip -o "${{ runner.temp }}/woocommerce.zip"
+          unzip -q "${{ runner.temp }}/woocommerce.zip" -d "${{ runner.temp }}"
+          echo "WC_PLUGIN_PATH=${{ runner.temp }}/woocommerce/woocommerce.php" >> "$GITHUB_ENV"
+
       - name: Run tests
+        env:
+          BAFW_PRICES_INCLUDE_TAX: ${{ matrix.tax-base == 'inclusive' && '1' || '' }}
         run: composer test
 
   plugin-check:
